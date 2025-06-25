@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "build:css": "npx tailwindcss-cli -i ./src/styles.css -o ./dist/output.css"
+    "build:css": "npx tailwindcss-cli -i ./src/styles.css -o ./dist/output.css",
+    "start": "live-server ./ --port=8080"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,7 @@
   "homepage": "https://github.com/kozy4324/mugen-reversi#readme",
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "live-server": "^1.2.2",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
     "tailwindcss-cli": "^0.1.2",
