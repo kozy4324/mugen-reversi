@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "build:css": "npx tailwindcss-cli -i ./src/styles.css -o ./dist/output.css",
-    "start": "live-server ./ --port=8080"
+    "start": "npm run build:all && live-server ./ --port=8080",
+    "build:all": "npm run build && npm run build:css"
   },
   "repository": {
     "type": "git",
