@@ -7,8 +7,39 @@
     <link href="./dist/output.css" rel="stylesheet">
 </head>
 <body>
-    <div id="app" class="flex justify-center items-center h-screen">
-        <!-- Game board will be dynamically rendered here -->
+    <div id="app" class="flex flex-col justify-center items-center min-h-screen bg-green-100 p-4">
+        <h1 class="text-4xl font-bold text-green-800 mb-8">オセロ (Reversi)</h1>
+        
+        <div class="game-info mb-4 text-center">
+            <div class="flex justify-center gap-8 mb-4">
+                <div class="player-info">
+                    <span class="font-semibold">黒 (先手)</span>
+                    <div class="score text-2xl font-bold" id="black-score">2</div>
+                </div>
+                <div class="player-info">
+                    <span class="font-semibold">白 (後手)</span>
+                    <div class="score text-2xl font-bold" id="white-score">2</div>
+                </div>
+            </div>
+            <div class="current-player text-xl font-semibold" id="current-player">
+                現在のプレイヤー: <span id="current-player-color">黒</span>
+            </div>
+        </div>
+        
+        <div id="game-board" class="game-board bg-green-800 p-2 rounded-lg shadow-lg">
+            <!-- Game board will be dynamically rendered here -->
+        </div>
+        
+        <div class="controls mt-6">
+            <button id="restart-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                ゲームリスタート
+            </button>
+        </div>
+        
+        <div id="game-over" class="game-over hidden mt-4 p-4 bg-yellow-100 border border-yellow-400 rounded text-center">
+            <h2 class="text-2xl font-bold mb-2">ゲーム終了</h2>
+            <div id="winner" class="text-lg"></div>
+        </div>
     </div>
     <script src="./dist/main.js" type="module"></script>
 </body>
