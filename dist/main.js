@@ -221,10 +221,14 @@ class GameUI {
     }
     renderBoard() {
         this.boardElement.innerHTML = '';
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
+        // 動的にグリッドサイズを設定
+        const boardSize = 8; // 現在は8x8固定だが、将来的に動的に変更可能
+        this.boardElement.style.gridTemplateColumns = `repeat(${boardSize}, minmax(0, 1fr))`;
+        this.boardElement.style.gridTemplateRows = `repeat(${boardSize}, minmax(0, 1fr))`;
+        for (let row = 0; row < boardSize; row++) {
+            for (let col = 0; col < boardSize; col++) {
                 const cell = document.createElement('div');
-                cell.className = 'cell';
+                cell.className = 'bg-green-600 border border-green-700 rounded cursor-pointer flex items-center justify-center transition-colors duration-200 ease-in-out hover:bg-green-500';
                 cell.dataset.row = row.toString();
                 cell.dataset.col = col.toString();
                 cell.addEventListener('click', () => {
@@ -238,26 +242,51 @@ class GameUI {
     updateBoardDisplay() {
         const board = this.game.getBoard();
         const validMoves = this.game.getValidMoves();
-        const cells = this.boardElement.querySelectorAll('.cell');
-        cells.forEach((cell, index) => {
+        const cells = this.boardElement.children;
+        Array.from(cells).forEach((cell, index) => {
             const row = Math.floor(index / 8);
             const col = index % 8;
             const piece = board[row][col];
             // 既存のpiece要素を削除
-            const existingPiece = cell.querySelector('.piece');
+            const existingPiece = cell.querySelector('div');
             if (existingPiece) {
                 existingPiece.remove();
             }
             // 石がある場合は表示
             if (piece !== Player.EMPTY) {
                 const pieceElement = document.createElement('div');
-                pieceElement.className = `piece ${piece === Player.BLACK ? 'black' : 'white'}`;
+                const baseClasses = 'w-4/5 h-4/5 rounded-full transition-all duration-300 ease-in-out shadow-md';
+                const colorClasses = piece === Player.BLACK
+                    ? 'bg-gray-800 border-2 border-gray-600'
+                    : 'bg-gray-50 border-2 border-gray-300';
+                pieceElement.className = `${baseClasses} ${colorClasses}`;
                 cell.appendChild(pieceElement);
+                // 新しく置かれた石にアニメーションを適用（前回の状態と比較）
+                const wasEmpty = !existingPiece;
+                if (wasEmpty) {
+                    this.applyFlipAnimation(pieceElement);
+                }
             }
             // 有効な手をハイライト
             const isValidMove = validMoves.some(move => move.row === row && move.col === col);
-            cell.classList.toggle('valid-move', isValidMove);
+            const cellElement = cell;
+            if (isValidMove) {
+                cellElement.classList.add('bg-lime-500', 'valid-move-highlight');
+                cellElement.classList.remove('bg-green-600', 'hover:bg-green-500');
+            }
+            else {
+                cellElement.classList.remove('bg-lime-500', 'valid-move-highlight');
+                cellElement.classList.add('bg-green-600', 'hover:bg-green-500');
+            }
         });
+    }
+    // 石にフリップアニメーションを適用
+    applyFlipAnimation(pieceElement) {
+        pieceElement.classList.add('piece-flip');
+        // アニメーション終了後にクラスを削除
+        setTimeout(() => {
+            pieceElement.classList.remove('piece-flip');
+        }, 600);
     }
     handleCellClick(row, col) {
         if (this.game.makeMove(row, col)) {
