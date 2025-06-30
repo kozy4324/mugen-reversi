@@ -83,12 +83,12 @@ class ReversiGame {
         // 石を置く
         this.board[row][col] = this.currentPlayer;
         // 石をひっくり返す
-        this.flipPieces(row, col, this.currentPlayer);
+        const flippedPieces = this.flipPieces(row, col, this.currentPlayer);
         // ターンを交代
         this.switchPlayer();
         // ゲーム終了チェック
         this.checkGameOver();
-        return true;
+        return flippedPieces;
     }
     // 石をひっくり返す
     flipPieces(row, col, player) {
@@ -97,22 +97,28 @@ class ReversiGame {
             [0, -1], [0, 1],
             [1, -1], [1, 0], [1, 1]
         ];
+        const flippedPieces = [];
         for (const [dr, dc] of directions) {
             if (this.canFlipInDirection(row, col, dr, dc, player)) {
-                this.flipInDirection(row, col, dr, dc, player);
+                const flipped = this.flipInDirection(row, col, dr, dc, player);
+                flippedPieces.push(...flipped);
             }
         }
+        return flippedPieces;
     }
     // 指定方向の石をひっくり返す
     flipInDirection(row, col, dr, dc, player) {
         const opponent = player === Player.BLACK ? Player.WHITE : Player.BLACK;
         let r = row + dr;
         let c = col + dc;
+        const flippedPieces = [];
         while (r >= 0 && r < 8 && c >= 0 && c < 8 && this.board[r][c] === opponent) {
             this.board[r][c] = player;
+            flippedPieces.push({ row: r, col: c });
             r += dr;
             c += dc;
         }
+        return flippedPieces;
     }
     // プレイヤーを交代
     switchPlayer() {
@@ -239,7 +245,7 @@ class GameUI {
         }
         this.updateBoardDisplay();
     }
-    updateBoardDisplay() {
+    updateBoardDisplay(flippedPieces = []) {
         const board = this.game.getBoard();
         const validMoves = this.game.getValidMoves();
         const cells = this.boardElement.children;
@@ -261,9 +267,9 @@ class GameUI {
                     : 'bg-gray-50 border-2 border-gray-300';
                 pieceElement.className = `${baseClasses} ${colorClasses}`;
                 cell.appendChild(pieceElement);
-                // 新しく置かれた石にアニメーションを適用（前回の状態と比較）
-                const wasEmpty = !existingPiece;
-                if (wasEmpty) {
+                // ひっくり返った石にアニメーションを適用
+                const wasFlipped = flippedPieces.some(flipped => flipped.row === row && flipped.col === col);
+                if (wasFlipped) {
                     this.applyFlipAnimation(pieceElement);
                 }
             }
@@ -289,8 +295,9 @@ class GameUI {
         }, 600);
     }
     handleCellClick(row, col) {
-        if (this.game.makeMove(row, col)) {
-            this.updateBoardDisplay();
+        const flippedPieces = this.game.makeMove(row, col);
+        if (flippedPieces !== false) {
+            this.updateBoardDisplay(flippedPieces);
             this.updateUI();
             if (this.game.isGameOver()) {
                 this.showGameOver();

@@ -90,7 +90,7 @@ class ReversiGame {
     }
     
     // 石を置く
-    public makeMove(row: number, col: number): boolean {
+    public makeMove(row: number, col: number): Array<{row: number, col: number}> | false {
         if (this.gameOver || !this.isValidMove(row, col, this.currentPlayer)) {
             return false;
         }
@@ -99,7 +99,7 @@ class ReversiGame {
         this.board[row][col] = this.currentPlayer;
         
         // 石をひっくり返す
-        this.flipPieces(row, col, this.currentPlayer);
+        const flippedPieces = this.flipPieces(row, col, this.currentPlayer);
         
         // ターンを交代
         this.switchPlayer();
@@ -107,35 +107,44 @@ class ReversiGame {
         // ゲーム終了チェック
         this.checkGameOver();
         
-        return true;
+        return flippedPieces;
     }
     
     // 石をひっくり返す
-    private flipPieces(row: number, col: number, player: Player): void {
+    private flipPieces(row: number, col: number, player: Player): Array<{row: number, col: number}> {
         const directions = [
             [-1, -1], [-1, 0], [-1, 1],
             [0, -1],           [0, 1],
             [1, -1],  [1, 0],  [1, 1]
         ];
         
+        const flippedPieces: Array<{row: number, col: number}> = [];
+        
         for (const [dr, dc] of directions) {
             if (this.canFlipInDirection(row, col, dr, dc, player)) {
-                this.flipInDirection(row, col, dr, dc, player);
+                const flipped = this.flipInDirection(row, col, dr, dc, player);
+                flippedPieces.push(...flipped);
             }
         }
+        
+        return flippedPieces;
     }
     
     // 指定方向の石をひっくり返す
-    private flipInDirection(row: number, col: number, dr: number, dc: number, player: Player): void {
+    private flipInDirection(row: number, col: number, dr: number, dc: number, player: Player): Array<{row: number, col: number}> {
         const opponent = player === Player.BLACK ? Player.WHITE : Player.BLACK;
         let r = row + dr;
         let c = col + dc;
+        const flippedPieces: Array<{row: number, col: number}> = [];
         
         while (r >= 0 && r < 8 && c >= 0 && c < 8 && this.board[r][c] === opponent) {
             this.board[r][c] = player;
+            flippedPieces.push({row: r, col: c});
             r += dr;
             c += dc;
         }
+        
+        return flippedPieces;
     }
     
     // プレイヤーを交代
@@ -290,7 +299,7 @@ class GameUI {
         this.updateBoardDisplay();
     }
     
-    private updateBoardDisplay(): void {
+    private updateBoardDisplay(flippedPieces: Array<{row: number, col: number}> = []): void {
         const board = this.game.getBoard();
         const validMoves = this.game.getValidMoves();
         const cells = this.boardElement.children;
@@ -316,9 +325,9 @@ class GameUI {
                 pieceElement.className = `${baseClasses} ${colorClasses}`;
                 cell.appendChild(pieceElement);
                 
-                // 新しく置かれた石にアニメーションを適用（前回の状態と比較）
-                const wasEmpty = !existingPiece;
-                if (wasEmpty) {
+                // ひっくり返った石にアニメーションを適用
+                const wasFlipped = flippedPieces.some(flipped => flipped.row === row && flipped.col === col);
+                if (wasFlipped) {
                     this.applyFlipAnimation(pieceElement);
                 }
             }
@@ -346,8 +355,9 @@ class GameUI {
     }
 
     private handleCellClick(row: number, col: number): void {
-        if (this.game.makeMove(row, col)) {
-            this.updateBoardDisplay();
+        const flippedPieces = this.game.makeMove(row, col);
+        if (flippedPieces !== false) {
+            this.updateBoardDisplay(flippedPieces);
             this.updateUI();
             
             if (this.game.isGameOver()) {
