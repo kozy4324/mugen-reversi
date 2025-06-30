@@ -8,7 +8,9 @@
     "build": "tsc",
     "build:css": "npx tailwindcss-cli -i ./src/styles.css -o ./dist/output.css",
     "start": "npm run build:all && live-server ./ --port=8080",
-    "build:all": "npm run build && npm run build:css"
+    "build:all": "npm run build && npm run build:css",
+    "watch": "nodemon --watch src --ext ts,css --exec \"npm run build:all\"",
+    "dev": "npm run build:all && npm run watch & live-server ./ --port=8080"
   },
   "repository": {
     "type": "git",
@@ -24,6 +26,7 @@
   "devDependencies": {
     "autoprefixer": "^10.4.21",
     "live-server": "^1.2.2",
+    "nodemon": "^3.1.10",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.10",
     "tailwindcss-cli": "^0.1.2",
