@@ -1,11 +1,7 @@
 // Entry point for the mugen-reversi game
 
-// 石の種類を定義
-enum Player {
-    EMPTY = 0,
-    BLACK = 1,
-    WHITE = 2
-}
+import { NPCManager } from './strategies/NPCManager.js';
+import { Player } from './strategies/base/NPCStrategy.js';
 
 // ゲームの状態を管理するクラス
 class ReversiGame {
@@ -239,6 +235,8 @@ class ReversiGame {
 // UI管理クラス
 class GameUI {
     private game: ReversiGame;
+    private npcManager: NPCManager;
+    private isNPCEnabled: boolean;
     private boardElement!: HTMLElement;
     private blackScoreElement!: HTMLElement;
     private whiteScoreElement!: HTMLElement;
@@ -249,6 +247,8 @@ class GameUI {
     
     constructor() {
         this.game = new ReversiGame();
+        this.npcManager = new NPCManager();
+        this.isNPCEnabled = true; // デフォルトでNPCを有効にする
         this.initializeElements();
         this.setupEventListeners();
     }
@@ -272,6 +272,12 @@ class GameUI {
     public start(): void {
         this.renderBoard();
         this.updateUI();
+        
+        // ゲーム開始時にNPCの情報を表示
+        if (this.isNPCEnabled) {
+            const npcInfo = this.npcManager.getCurrentStrategyInfo();
+            console.log(`NPC戦略: ${npcInfo.name} (${npcInfo.difficulty}) - ${npcInfo.description}`);
+        }
     }
      private renderBoard(): void {
         this.boardElement.innerHTML = '';
@@ -362,7 +368,46 @@ class GameUI {
             
             if (this.game.isGameOver()) {
                 this.showGameOver();
+            } else if (this.isNPCEnabled && this.game.getCurrentPlayer() === Player.WHITE) {
+                // NPCのターンの場合、少し遅延させてからNPCの手を実行
+                setTimeout(() => {
+                    this.makeNPCMove();
+                }, 500);
             }
+        }
+    }
+
+    /**
+     * NPCの手を実行
+     */
+    private makeNPCMove(): void {
+        if (this.game.isGameOver() || this.game.getCurrentPlayer() !== Player.WHITE) {
+            return;
+        }
+
+        try {
+            const validMoves = this.game.getValidMoves();
+            if (validMoves.length === 0) {
+                return;
+            }
+
+            const npcMove = this.npcManager.makeMove(
+                this.game.getBoard(), 
+                validMoves, 
+                this.game.getCurrentPlayer()
+            );
+
+            const flippedPieces = this.game.makeMove(npcMove.row, npcMove.col);
+            if (flippedPieces !== false) {
+                this.updateBoardDisplay(flippedPieces);
+                this.updateUI();
+                
+                if (this.game.isGameOver()) {
+                    this.showGameOver();
+                }
+            }
+        } catch (error) {
+            console.error('NPCの手の実行中にエラーが発生しました:', error);
         }
     }
     
@@ -396,6 +441,12 @@ class GameUI {
         this.gameOverElement.classList.add('hidden');
         this.renderBoard();
         this.updateUI();
+        
+        // 新しいゲーム開始時にNPCの情報を再表示
+        if (this.isNPCEnabled) {
+            const npcInfo = this.npcManager.getCurrentStrategyInfo();
+            console.log(`新しいゲーム開始 - NPC戦略: ${npcInfo.name} (${npcInfo.difficulty})`);
+        }
     }
 }
 
