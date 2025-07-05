@@ -200,6 +200,7 @@ class GameUI {
         this.game = new ReversiGame();
         this.npcManager = new NPCManager();
         this.isNPCEnabled = true; // デフォルトでNPCを有効にする
+        this.isNPCTurn = false;
         this.initializeElements();
         this.setupEventListeners();
     }
@@ -219,6 +220,7 @@ class GameUI {
     }
     start() {
         this.renderBoard();
+        this.updateNPCTurnState();
         this.updateUI();
         // ゲーム開始時にNPCの情報を表示
         if (this.isNPCEnabled) {
@@ -235,7 +237,7 @@ class GameUI {
         for (let row = 0; row < boardSize; row++) {
             for (let col = 0; col < boardSize; col++) {
                 const cell = document.createElement('div');
-                cell.className = 'bg-green-600 border border-green-700 rounded cursor-pointer flex items-center justify-center transition-colors duration-200 ease-in-out hover:bg-green-500';
+                cell.className = 'bg-green-600 border border-green-700 rounded flex items-center justify-center transition-colors duration-200 ease-in-out';
                 cell.dataset.row = row.toString();
                 cell.dataset.col = col.toString();
                 cell.addEventListener('click', () => {
@@ -274,16 +276,26 @@ class GameUI {
                     this.applyFlipAnimation(pieceElement);
                 }
             }
-            // 有効な手をハイライト
-            const isValidMove = validMoves.some(move => move.row === row && move.col === col);
+            // NPCのターンでない場合のみ有効な手をハイライト
+            const isValidMove = !this.isNPCTurn && validMoves.some(move => move.row === row && move.col === col);
             const cellElement = cell;
             if (isValidMove) {
                 cellElement.classList.add('bg-lime-500', 'valid-move-highlight');
-                cellElement.classList.remove('bg-green-600', 'hover:bg-green-500');
+                cellElement.classList.remove('bg-green-600', 'hover:bg-green-500', 'cursor-not-allowed');
+                cellElement.classList.add('cursor-pointer');
             }
             else {
                 cellElement.classList.remove('bg-lime-500', 'valid-move-highlight');
-                cellElement.classList.add('bg-green-600', 'hover:bg-green-500');
+                cellElement.classList.add('bg-green-600');
+                // NPCのターン時はhoverエフェクトも無効化し、カーソルを変更
+                if (!this.isNPCTurn) {
+                    cellElement.classList.add('hover:bg-green-500', 'cursor-pointer');
+                    cellElement.classList.remove('cursor-not-allowed');
+                }
+                else {
+                    cellElement.classList.remove('hover:bg-green-500', 'cursor-pointer');
+                    cellElement.classList.add('cursor-not-allowed');
+                }
             }
         });
     }
@@ -296,8 +308,13 @@ class GameUI {
         }, 600);
     }
     handleCellClick(row, col) {
+        // NPCのターン時はユーザー入力を受け付けない
+        if (this.isNPCTurn) {
+            return;
+        }
         const flippedPieces = this.game.makeMove(row, col);
         if (flippedPieces !== false) {
+            this.updateNPCTurnState();
             this.updateBoardDisplay(flippedPieces);
             this.updateUI();
             if (this.game.isGameOver()) {
@@ -318,6 +335,9 @@ class GameUI {
         if (this.game.isGameOver() || this.game.getCurrentPlayer() !== Player.WHITE) {
             return;
         }
+        // NPCターン開始
+        this.isNPCTurn = true;
+        this.updateBoardDisplay(); // ユーザー入力無効化の表示更新
         try {
             const validMoves = this.game.getValidMoves();
             if (validMoves.length === 0) {
@@ -326,6 +346,7 @@ class GameUI {
             const npcMove = this.npcManager.makeMove(this.game.getBoard(), validMoves, this.game.getCurrentPlayer());
             const flippedPieces = this.game.makeMove(npcMove.row, npcMove.col);
             if (flippedPieces !== false) {
+                this.updateNPCTurnState();
                 this.updateBoardDisplay(flippedPieces);
                 this.updateUI();
                 if (this.game.isGameOver()) {
@@ -335,7 +356,22 @@ class GameUI {
         }
         catch (error) {
             console.error('NPCの手の実行中にエラーが発生しました:', error);
+            // エラーが発生した場合もNPCターンを終了
+            this.updateNPCTurnState();
+            this.updateBoardDisplay();
         }
+    }
+    /**
+     * NPCのターンかどうかを判定
+     */
+    isCurrentlyNPCTurn() {
+        return this.isNPCEnabled && this.game.getCurrentPlayer() === Player.WHITE && !this.game.isGameOver();
+    }
+    /**
+     * NPCターンの状態を更新
+     */
+    updateNPCTurnState() {
+        this.isNPCTurn = this.isCurrentlyNPCTurn();
     }
     updateUI() {
         const score = this.game.getScore();
@@ -361,8 +397,10 @@ class GameUI {
     }
     restartGame() {
         this.game.reset();
+        this.isNPCTurn = false;
         this.gameOverElement.classList.add('hidden');
         this.renderBoard();
+        this.updateNPCTurnState();
         this.updateUI();
         // 新しいゲーム開始時にNPCの情報を再表示
         if (this.isNPCEnabled) {
