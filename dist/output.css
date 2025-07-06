@@ -31431,6 +31431,111 @@ video {
   }
 }
 
+/* ターゲットロックシステム */
+
+.target-lock-animation {
+  animation: targetLockPulse 1s ease-in-out infinite;
+}
+
+.target-lock-outer {
+  animation: targetLockRotate 2s linear infinite;
+}
+
+.target-lock-inner {
+  animation: targetLockRotate 1.5s linear infinite reverse;
+}
+
+.target-lock-crosshair {
+  animation: targetLockCrosshair 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes targetLockPulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes targetLockRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes targetLockCrosshair {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* ターゲットロック時のセル強調 */
+
+.target-locked-cell {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  transition: background-color 0.2s ease;
+}
+
+/* クリックフィードバック */
+
+.click-feedback {
+  animation: clickFeedback 0.5s ease-out forwards;
+}
+
+@keyframes clickFeedback {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.5);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* ターゲットロック確認時の強調 */
+
+.target-lock-confirm {
+  animation: targetLockConfirm 0.2s ease-out forwards;
+}
+
+@keyframes targetLockConfirm {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+    filter: brightness(1.5) contrast(1.2);
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
 @media (min-width: 640px) {
   .sm\:container {
     width: 100%;

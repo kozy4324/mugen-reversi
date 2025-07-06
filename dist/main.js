@@ -201,6 +201,7 @@ class GameUI {
         this.npcManager = new NPCManager();
         this.isNPCEnabled = true; // デフォルトでNPCを有効にする
         this.isNPCTurn = false;
+        this.targetLockElement = null;
         this.initializeElements();
         this.setupEventListeners();
     }
@@ -217,8 +218,19 @@ class GameUI {
         this.restartButton.addEventListener('click', () => {
             this.restartGame();
         });
+        // 盤面全体にイベントリスナーを追加
+        this.boardElement.addEventListener('click', (event) => {
+            this.handleBoardClick(event);
+        });
+        this.boardElement.addEventListener('mousemove', (event) => {
+            this.handleBoardMouseMove(event);
+        });
+        this.boardElement.addEventListener('mouseleave', () => {
+            this.hideTargetLock();
+        });
     }
     start() {
+        this.hideTargetLock(); // ターゲットロックをクリア
         this.renderBoard();
         this.updateNPCTurnState();
         this.updateUI();
@@ -244,9 +256,7 @@ class GameUI {
                 cell.className = 'bg-green-600 border border-green-700 rounded flex items-center justify-center transition-colors duration-200 ease-in-out';
                 cell.dataset.row = row.toString();
                 cell.dataset.col = col.toString();
-                cell.addEventListener('click', () => {
-                    this.handleCellClick(row, col);
-                });
+                // 個別のセルクリックイベントは削除（盤面全体で処理するため）
                 this.boardElement.appendChild(cell);
             }
         }
@@ -512,6 +522,133 @@ class GameUI {
             console.log('NPC cell animation finished');
         };
     }
+    /**
+     * 盤面クリック時の処理（どこをクリックしても最寄りのマスに石を置く）
+     */
+    handleBoardClick(event) {
+        // NPCのターン時はユーザー入力を受け付けない
+        if (this.isNPCTurn) {
+            return;
+        }
+        const targetPosition = this.getNearestValidCell(event);
+        if (targetPosition) {
+            // クリック時のフィードバックエフェクト
+            this.showClickFeedback(event.clientX, event.clientY);
+            // ターゲットロックを一時的に強調
+            this.highlightTargetLock();
+            // 石を配置
+            setTimeout(() => {
+                this.handleCellClick(targetPosition.row, targetPosition.col);
+            }, 100); // 100ms後に配置（フィードバック表示のため）
+        }
+    }
+    /**
+     * 盤面マウス移動時の処理（ターゲットロックの表示）
+     */
+    handleBoardMouseMove(event) {
+        // NPCのターン時は表示しない
+        if (this.isNPCTurn) {
+            this.hideTargetLock();
+            return;
+        }
+        const targetPosition = this.getNearestValidCell(event);
+        if (targetPosition) {
+            this.showTargetLock(targetPosition.row, targetPosition.col);
+        }
+        else {
+            this.hideTargetLock();
+        }
+    }
+    /**
+     * マウス座標から最寄りの有効なマスを取得
+     */
+    getNearestValidCell(event) {
+        const rect = this.boardElement.getBoundingClientRect();
+        const cellSize = rect.width / 8; // 8x8の盤面
+        // マウス座標を盤面内の相対座標に変換
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        // クリック位置に最も近いセルを計算
+        const targetCol = Math.max(0, Math.min(7, Math.floor(x / cellSize)));
+        const targetRow = Math.max(0, Math.min(7, Math.floor(y / cellSize)));
+        // 有効な手のリストを取得
+        const validMoves = this.game.getValidMoves();
+        // ターゲットセルが有効な手の場合はそのまま返す
+        const exactMatch = validMoves.find(move => move.row === targetRow && move.col === targetCol);
+        if (exactMatch) {
+            return exactMatch;
+        }
+        // 有効な手がない場合は null を返す
+        if (validMoves.length === 0) {
+            return null;
+        }
+        // 最寄りの有効な手を計算
+        let nearestMove = validMoves[0];
+        let minDistance = this.calculateDistance(targetRow, targetCol, nearestMove.row, nearestMove.col);
+        for (const move of validMoves) {
+            const distance = this.calculateDistance(targetRow, targetCol, move.row, move.col);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestMove = move;
+            }
+        }
+        return nearestMove;
+    }
+    /**
+     * 2点間の距離を計算
+     */
+    calculateDistance(row1, col1, row2, col2) {
+        return Math.sqrt(Math.pow(row1 - row2, 2) + Math.pow(col1 - col2, 2));
+    }
+    /**
+     * ターゲットロックの表示
+     */
+    showTargetLock(row, col) {
+        // 既存のターゲットロックを削除
+        this.hideTargetLock();
+        const cellIndex = row * 8 + col;
+        const targetCell = this.boardElement.children[cellIndex];
+        if (targetCell) {
+            // セルに強調表示クラスを追加
+            targetCell.classList.add('target-locked-cell');
+            // ターゲットロック要素を作成
+            this.targetLockElement = document.createElement('div');
+            this.targetLockElement.className = 'absolute inset-0 pointer-events-none z-10';
+            this.targetLockElement.innerHTML = `
+                <div class="target-lock-outer absolute inset-0 border-4 border-red-500 rounded-lg opacity-80"></div>
+                <div class="target-lock-inner absolute inset-2 border-2 border-red-300 rounded opacity-60"></div>
+                <div class="target-lock-crosshair absolute inset-0 flex items-center justify-center">
+                    <div class="w-1 h-6 bg-red-500 absolute"></div>
+                    <div class="h-1 w-6 bg-red-500 absolute"></div>
+                    <div class="w-2 h-2 bg-red-500 rounded-full border border-red-300"></div>
+                </div>
+                <div class="absolute top-1 left-1 text-xs text-red-500 font-bold bg-white bg-opacity-80 px-1 rounded">
+                    ${row + 1}-${col + 1}
+                </div>
+            `;
+            targetCell.style.position = 'relative';
+            targetCell.appendChild(this.targetLockElement);
+            // ロックオンアニメーションを開始
+            this.targetLockElement.classList.add('target-lock-animation');
+            // マウスカーソルをターゲットに変更
+            this.boardElement.style.cursor = 'crosshair';
+        }
+    }
+    /**
+     * ターゲットロックの非表示
+     */
+    hideTargetLock() {
+        if (this.targetLockElement) {
+            const parentCell = this.targetLockElement.parentElement;
+            if (parentCell) {
+                parentCell.classList.remove('target-locked-cell');
+            }
+            this.targetLockElement.remove();
+            this.targetLockElement = null;
+        }
+        // マウスカーソルを元に戻す
+        this.boardElement.style.cursor = 'default';
+    }
     handleCellClick(row, col) {
         // NPCのターン時はユーザー入力を受け付けない
         if (this.isNPCTurn) {
@@ -549,6 +686,7 @@ class GameUI {
         }
         // NPCターン開始
         this.isNPCTurn = true;
+        this.hideTargetLock(); // ターゲットロックを非表示
         this.updateBoardDisplay(); // ユーザー入力無効化の表示更新
         try {
             const validMoves = this.game.getValidMoves();
@@ -619,6 +757,7 @@ class GameUI {
     restartGame() {
         this.game.reset();
         this.isNPCTurn = false;
+        this.hideTargetLock(); // ターゲットロックをクリア
         this.gameOverElement.classList.add('hidden');
         this.renderBoard();
         this.updateNPCTurnState();
@@ -681,6 +820,38 @@ class GameUI {
                 }, index * 30); // 30msずつ遅延（短縮）
             }
         });
+    }
+    /**
+     * クリック時のフィードバックエフェクト（画面上のクリック位置に表示）
+     */
+    showClickFeedback(clientX, clientY) {
+        const feedbackElement = document.createElement('div');
+        feedbackElement.className = 'fixed pointer-events-none z-50';
+        feedbackElement.style.left = `${clientX - 10}px`;
+        feedbackElement.style.top = `${clientY - 10}px`;
+        feedbackElement.innerHTML = `
+            <div class="click-feedback w-5 h-5 bg-red-500 rounded-full opacity-80 animate-ping"></div>
+            <div class="absolute inset-0 w-5 h-5 bg-red-300 rounded-full opacity-60"></div>
+        `;
+        document.body.appendChild(feedbackElement);
+        // 500ms後に削除
+        setTimeout(() => {
+            feedbackElement.remove();
+        }, 500);
+    }
+    /**
+     * ターゲットロックの強調表示
+     */
+    highlightTargetLock() {
+        if (this.targetLockElement) {
+            this.targetLockElement.classList.add('target-lock-confirm');
+            // 200ms後にクラスを削除
+            setTimeout(() => {
+                if (this.targetLockElement) {
+                    this.targetLockElement.classList.remove('target-lock-confirm');
+                }
+            }, 200);
+        }
     }
 }
 // ゲーム開始
