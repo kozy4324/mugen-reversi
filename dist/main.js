@@ -248,7 +248,7 @@ class GameUI {
         }
         this.updateBoardDisplay();
     }
-    updateBoardDisplay(flippedPieces = []) {
+    updateBoardDisplay(flippedPieces = [], newPiecePosition, isNPCMove = false) {
         const board = this.game.getBoard();
         const validMoves = this.game.getValidMoves();
         const cells = this.boardElement.children;
@@ -298,6 +298,24 @@ class GameUI {
                 }
             }
         });
+        // 新しく置かれた石にアニメーションを適用（DOM更新後に実行）
+        if (newPiecePosition) {
+            const cellIndex = newPiecePosition.row * 8 + newPiecePosition.col;
+            const targetCell = cells[cellIndex];
+            const pieceElement = targetCell.querySelector('div');
+            if (pieceElement) {
+                // 次のフレームでアニメーションを適用
+                requestAnimationFrame(() => {
+                    console.log(`Applying animation to piece at (${newPiecePosition.row}, ${newPiecePosition.col}), isNPC: ${isNPCMove}`);
+                    if (isNPCMove) {
+                        this.applyNPCPlaceAnimation(pieceElement, targetCell);
+                    }
+                    else {
+                        this.applyPlaceAnimation(pieceElement);
+                    }
+                });
+            }
+        }
     }
     // 石にフリップアニメーションを適用
     applyFlipAnimation(pieceElement) {
@@ -307,6 +325,92 @@ class GameUI {
             pieceElement.classList.remove('piece-flip');
         }, 600);
     }
+    // 石の配置アニメーションを適用（プレイヤー用）
+    applyPlaceAnimation(pieceElement) {
+        console.log('Applying player place animation');
+        // Web Animations APIを使用してアニメーションを確実に実行
+        const animation = pieceElement.animate([
+            {
+                transform: 'scale(0) rotate(180deg)',
+                opacity: '0'
+            },
+            {
+                transform: 'scale(1.3) rotate(90deg)',
+                opacity: '0.8',
+                offset: 0.5
+            },
+            {
+                transform: 'scale(1) rotate(0deg)',
+                opacity: '1'
+            }
+        ], {
+            duration: 800,
+            easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+            fill: 'both'
+        });
+        animation.onfinish = () => {
+            console.log('Player animation finished');
+        };
+    }
+    // 石の配置アニメーションを適用（NPC用）
+    applyNPCPlaceAnimation(pieceElement, cellElement) {
+        console.log('Applying NPC place animation');
+        // 石のアニメーション
+        const pieceAnimation = pieceElement.animate([
+            {
+                transform: 'scale(0) rotate(-180deg)',
+                opacity: '0',
+                boxShadow: '0 0 0 0 rgba(59, 130, 246, 0.7)'
+            },
+            {
+                transform: 'scale(1.5) rotate(-90deg)',
+                opacity: '0.9',
+                boxShadow: '0 0 20px 10px rgba(59, 130, 246, 0.4)',
+                offset: 0.3
+            },
+            {
+                transform: 'scale(1.1) rotate(-20deg)',
+                opacity: '1',
+                boxShadow: '0 0 15px 5px rgba(59, 130, 246, 0.3)',
+                offset: 0.6
+            },
+            {
+                transform: 'scale(1) rotate(0deg)',
+                opacity: '1',
+                boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)'
+            }
+        ], {
+            duration: 1000,
+            easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+            fill: 'both'
+        });
+        // セルのハイライトアニメーション
+        const cellAnimation = cellElement.animate([
+            {
+                boxShadow: 'inset 0 0 0 0 rgba(59, 130, 246, 0)',
+                backgroundColor: 'rgb(22, 163, 74)'
+            },
+            {
+                boxShadow: 'inset 0 0 30px 10px rgba(59, 130, 246, 0.6)',
+                backgroundColor: 'rgb(59, 130, 246)',
+                offset: 0.5
+            },
+            {
+                boxShadow: 'inset 0 0 0 0 rgba(59, 130, 246, 0)',
+                backgroundColor: 'rgb(22, 163, 74)'
+            }
+        ], {
+            duration: 1200,
+            easing: 'ease-out',
+            fill: 'both'
+        });
+        pieceAnimation.onfinish = () => {
+            console.log('NPC piece animation finished');
+        };
+        cellAnimation.onfinish = () => {
+            console.log('NPC cell animation finished');
+        };
+    }
     handleCellClick(row, col) {
         // NPCのターン時はユーザー入力を受け付けない
         if (this.isNPCTurn) {
@@ -315,7 +419,7 @@ class GameUI {
         const flippedPieces = this.game.makeMove(row, col);
         if (flippedPieces !== false) {
             this.updateNPCTurnState();
-            this.updateBoardDisplay(flippedPieces);
+            this.updateBoardDisplay(flippedPieces, { row, col }, false);
             this.updateUI();
             if (this.game.isGameOver()) {
                 this.showGameOver();
@@ -347,7 +451,7 @@ class GameUI {
             const flippedPieces = this.game.makeMove(npcMove.row, npcMove.col);
             if (flippedPieces !== false) {
                 this.updateNPCTurnState();
-                this.updateBoardDisplay(flippedPieces);
+                this.updateBoardDisplay(flippedPieces, { row: npcMove.row, col: npcMove.col }, true);
                 this.updateUI();
                 if (this.game.isGameOver()) {
                     this.showGameOver();
