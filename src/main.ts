@@ -375,7 +375,7 @@ class GameUI {
             const cellElement = cell as HTMLElement;
             
             // 既存のアニメーションクラスをクリア
-            cellElement.classList.remove('valid-move-appear', 'valid-move-disappear', 'npc-turn-feedback');
+            cellElement.classList.remove('valid-move-appear', 'valid-move-disappear', 'npc-turn-feedback', 'target-locked-cell');
             
             // 基本的なセルスタイルを設定
             cellElement.classList.remove('bg-lime-500', 'valid-move-highlight');
@@ -753,10 +753,19 @@ class GameUI {
             const parentCell = this.targetLockElement.parentElement;
             if (parentCell) {
                 parentCell.classList.remove('target-locked-cell');
+                // 確実にスタイルをリセット
+                parentCell.style.position = '';
             }
             this.targetLockElement.remove();
             this.targetLockElement = null;
         }
+        
+        // 念のため、すべてのセルから target-locked-cell クラスを削除
+        const cells = this.boardElement.children;
+        Array.from(cells).forEach(cell => {
+            const cellElement = cell as HTMLElement;
+            cellElement.classList.remove('target-locked-cell');
+        });
         
         // マウスカーソルを元に戻す
         this.boardElement.style.cursor = 'default';
@@ -768,8 +777,9 @@ class GameUI {
             return;
         }
         
-        // プレイヤーが手を打つ前に有効手のアニメーションを消去
+        // プレイヤーが手を打つ前に有効手のアニメーションとターゲットロックを消去
         this.hideValidMovesWithAnimation();
+        this.hideTargetLock();
         
         // makeMove前の盤面状態を保存
         const preMoveBoard = this.game.getBoard().map(row => [...row]);
