@@ -458,7 +458,7 @@ class GameUI {
                             onAllComplete();
                         }
                     });
-                }, index * 30); // 30msずつ遅延（短縮）
+                }, index * 10); // 10msずつ遅延（30msから短縮）
             } else {
                 completedCount++;
                 // 要素が見つからない場合もカウントを進める
@@ -480,16 +480,16 @@ class GameUI {
             
             pieceElement.classList.add('piece-flip');
             
-            // アニメーションの正確な中間点（300ms、90度回転の瞬間）で色を変更
-            // ease-in-outの場合、実際の90度回転は約200msで発生する（0.4sの50%）
+            // アニメーションの正確な中間点（133ms、90度回転の瞬間）で色を変更
+            // ease-in-outの場合、実際の90度回転は約67msで発生する（0.133sの50%）
             setTimeout(() => {
-                console.log('Changing color during flip animation at 200ms');
+                console.log('Changing color during flip animation at 67ms');
                 // 既存の色クラスを削除
                 pieceElement.classList.remove('bg-gray-800', 'border-gray-600', 'bg-gray-50', 'border-gray-300');
                 // 新しい色クラスを適用
                 const colorClassArray = newColorClasses.split(' ');
                 pieceElement.classList.add(...colorClassArray);
-            }, 200); // 400msアニメーションの50%時点（200ms）
+            }, 67); // 133msアニメーションの50%時点（67ms）
             
             // アニメーション終了後にクラスを削除
             setTimeout(() => {
@@ -498,7 +498,7 @@ class GameUI {
                 if (onComplete) {
                     onComplete();
                 }
-            }, 400);
+            }, 133);
         } else {
             // 通常のフリップアニメーション（色変更なし）
             pieceElement.classList.add('piece-flip');
@@ -507,7 +507,7 @@ class GameUI {
                 if (onComplete) {
                     onComplete();
                 }
-            }, 400);
+            }, 133);
         }
     }
 
@@ -531,7 +531,7 @@ class GameUI {
                 opacity: '1' 
             }
         ], {
-            duration: 500,
+            duration: 167,
             easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
             fill: 'both'
         });
@@ -573,7 +573,7 @@ class GameUI {
                 boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)'
             }
         ], {
-            duration: 700,
+            duration: 233,
             easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
             fill: 'both'
         });
@@ -594,7 +594,7 @@ class GameUI {
                 backgroundColor: 'rgb(22, 163, 74)'
             }
         ], {
-            duration: 800,
+            duration: 267,
             easing: 'ease-out',
             fill: 'both'
         });
@@ -631,7 +631,7 @@ class GameUI {
             // 石を配置
             setTimeout(() => {
                 this.handleCellClick(targetPosition.row, targetPosition.col);
-            }, 100); // 100ms後に配置（フィードバック表示のため）
+            }, 33); // 33ms後に配置（フィードバック表示のため）
         }
     }
     
@@ -796,7 +796,7 @@ class GameUI {
                     // プレイヤーのアニメーション完了後、少し間を置いてからNPCの手を実行
                     setTimeout(() => {
                         this.makeNPCMove();
-                    }, 150);
+                    }, 50);
                 }
             };
             
@@ -843,7 +843,7 @@ class GameUI {
                         this.showGameOver();
                     } else {
                         // NPCのアニメーションが完了したら、プレイヤーの有効手を遅延表示
-                        this.showValidMovesWithAnimation(100); // 100ms後に表示開始（さらに短縮）
+                        this.showValidMovesWithAnimation(33); // 33ms後に表示開始（さらに短縮）
                     }
                 };
                 
@@ -944,8 +944,8 @@ class GameUI {
                         // アニメーション終了後にクラスを削除
                         setTimeout(() => {
                             cellElement.classList.remove('valid-move-appear');
-                        }, 200);
-                    }, index * 30); // 30msずつ遅延（さらに短縮）
+                        }, 67);
+                    }, index * 10); // 10msずつ遅延（さらに短縮）
                 }
             });
         }, delay);
@@ -970,8 +970,8 @@ class GameUI {
                     setTimeout(() => {
                         cellElement.classList.remove('bg-lime-500', 'valid-move-highlight', 'valid-move-disappear');
                         cellElement.classList.add('bg-green-600');
-                    }, 200);
-                }, index * 30); // 30msずつ遅延（短縮）
+                    }, 67);
+                }, index * 10); // 10msずつ遅延（短縮）
             }
         });
     }
@@ -991,10 +991,10 @@ class GameUI {
         
         document.body.appendChild(feedbackElement);
         
-        // 500ms後に削除
+        // 167ms後に削除
         setTimeout(() => {
             feedbackElement.remove();
-        }, 500);
+        }, 167);
     }
     
     /**
@@ -1004,12 +1004,12 @@ class GameUI {
         if (this.targetLockElement) {
             this.targetLockElement.classList.add('target-lock-confirm');
             
-            // 200ms後にクラスを削除
+            // 67ms後にクラスを削除
             setTimeout(() => {
                 if (this.targetLockElement) {
                     this.targetLockElement.classList.remove('target-lock-confirm');
                 }
-            }, 200);
+            }, 67);
         }
     }
 }

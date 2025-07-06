@@ -31252,7 +31252,7 @@ video {
 /* TailwindCSSでは表現できない複雑なアニメーション */
 
 .piece-flip {
-  animation: flip 0.4s ease-in-out;
+  animation: flip 0.133s ease-in-out;
 }
 
 @keyframes flip {
@@ -31272,7 +31272,7 @@ video {
 /* 新しく置かれた石のアニメーション（プレイヤー用） */
 
 .piece-placed {
-  animation: placePiece 0.3s ease-out;
+  animation: placePiece 0.1s ease-out;
 }
 
 @keyframes placePiece {
@@ -31298,7 +31298,7 @@ video {
 /* NPCが置いた石の特別なアニメーション */
 
 .piece-npc-placed {
-  animation: npcPlacePiece 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  animation: npcPlacePiece 0.233s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 @keyframes npcPlacePiece {
@@ -31330,7 +31330,7 @@ video {
 /* セルの輝きエフェクト（NPCが置いた位置用） */
 
 .cell-npc-highlight {
-  animation: cellHighlight 0.8s ease-out;
+  animation: cellHighlight 0.267s ease-out;
 }
 
 @keyframes cellHighlight {
@@ -31370,7 +31370,7 @@ video {
 /* プレイヤーターン開始時の有効手出現アニメーション */
 
 .valid-move-appear {
-  animation: validMoveAppear 0.2s ease-out forwards;
+  animation: validMoveAppear 0.067s ease-out forwards;
 }
 
 @keyframes validMoveAppear {
@@ -31394,7 +31394,7 @@ video {
 /* プレイヤーターン終了時の有効手消失アニメーション */
 
 .valid-move-disappear {
-  animation: validMoveDisappear 0.2s ease-in forwards;
+  animation: validMoveDisappear 0.067s ease-in forwards;
 }
 
 @keyframes validMoveDisappear {
@@ -31416,7 +31416,7 @@ video {
 /* NPCターン中のフィードバック表示 */
 
 .npc-turn-feedback {
-  animation: npcTurnPulse 1.5s ease-in-out infinite;
+  animation: npcTurnPulse 0.5s ease-in-out infinite;
 }
 
 @keyframes npcTurnPulse {
@@ -31434,19 +31434,19 @@ video {
 /* ターゲットロックシステム */
 
 .target-lock-animation {
-  animation: targetLockPulse 1s ease-in-out infinite;
+  animation: targetLockPulse 0.333s ease-in-out infinite;
 }
 
 .target-lock-outer {
-  animation: targetLockRotate 2s linear infinite;
+  animation: targetLockRotate 0.667s linear infinite;
 }
 
 .target-lock-inner {
-  animation: targetLockRotate 1.5s linear infinite reverse;
+  animation: targetLockRotate 0.5s linear infinite reverse;
 }
 
 .target-lock-crosshair {
-  animation: targetLockCrosshair 0.8s ease-in-out infinite alternate;
+  animation: targetLockCrosshair 0.267s ease-in-out infinite alternate;
 }
 
 @keyframes targetLockPulse {
@@ -31489,13 +31489,13 @@ video {
   background-color: rgba(22, 163, 74, 0.8) !important;
   /* green-600 with opacity */
   box-shadow: inset 0 0 10px rgba(239, 68, 68, 0.3) !important;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.067s ease, box-shadow 0.067s ease;
 }
 
 /* クリックフィードバック */
 
 .click-feedback {
-  animation: clickFeedback 0.5s ease-out forwards;
+  animation: clickFeedback 0.167s ease-out forwards;
 }
 
 @keyframes clickFeedback {
@@ -31518,7 +31518,7 @@ video {
 /* ターゲットロック確認時の強調 */
 
 .target-lock-confirm {
-  animation: targetLockConfirm 0.2s ease-out forwards;
+  animation: targetLockConfirm 0.067s ease-out forwards;
 }
 
 @keyframes targetLockConfirm {
