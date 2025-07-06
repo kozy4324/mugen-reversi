@@ -276,6 +276,11 @@ class GameUI {
         this.updateNPCTurnState();
         this.updateUI();
         
+        // ゲーム開始時にプレイヤーの有効手を表示
+        if (!this.isNPCTurn) {
+            this.showValidMovesWithAnimation(200); // 200ms後に表示開始（さらに短縮）
+        }
+        
         // ゲーム開始時にNPCの情報を表示
         if (this.isNPCEnabled) {
             const npcInfo = this.npcManager.getCurrentStrategyInfo();
@@ -352,24 +357,23 @@ class GameUI {
                 cell.appendChild(pieceElement);
             }
             
-            // NPCのターンでない場合のみ有効な手をハイライト
-            const isValidMove = !this.isNPCTurn && validMoves.some(move => move.row === row && move.col === col);
+            // セルの基本スタイルを設定（有効手の表示は別途制御）
             const cellElement = cell as HTMLElement;
-            if (isValidMove) {
-                cellElement.classList.add('bg-lime-500', 'valid-move-highlight');
-                cellElement.classList.remove('bg-green-600', 'hover:bg-green-500', 'cursor-not-allowed');
-                cellElement.classList.add('cursor-pointer');
+            
+            // 既存のアニメーションクラスをクリア
+            cellElement.classList.remove('valid-move-appear', 'valid-move-disappear', 'npc-turn-feedback');
+            
+            // 基本的なセルスタイルを設定
+            cellElement.classList.remove('bg-lime-500', 'valid-move-highlight');
+            cellElement.classList.add('bg-green-600');
+            
+            // NPCのターン中は操作不可能にする
+            if (this.isNPCTurn) {
+                cellElement.classList.remove('hover:bg-green-500', 'cursor-pointer');
+                cellElement.classList.add('cursor-not-allowed', 'npc-turn-feedback');
             } else {
-                cellElement.classList.remove('bg-lime-500', 'valid-move-highlight');
-                cellElement.classList.add('bg-green-600');
-                // NPCのターン時はhoverエフェクトも無効化し、カーソルを変更
-                if (!this.isNPCTurn) {
-                    cellElement.classList.add('hover:bg-green-500', 'cursor-pointer');
-                    cellElement.classList.remove('cursor-not-allowed');
-                } else {
-                    cellElement.classList.remove('hover:bg-green-500', 'cursor-pointer');
-                    cellElement.classList.add('cursor-not-allowed');
-                }
+                cellElement.classList.remove('cursor-not-allowed', 'npc-turn-feedback');
+                cellElement.classList.add('hover:bg-green-500', 'cursor-pointer');
             }
         });
         
@@ -440,7 +444,7 @@ class GameUI {
                             onAllComplete();
                         }
                     });
-                }, index * 50); // 50msずつ遅延
+                }, index * 30); // 30msずつ遅延（短縮）
             } else {
                 completedCount++;
                 // 要素が見つからない場合もカウントを進める
@@ -463,15 +467,15 @@ class GameUI {
             pieceElement.classList.add('piece-flip');
             
             // アニメーションの正確な中間点（300ms、90度回転の瞬間）で色を変更
-            // ease-in-outの場合、実際の90度回転は約300msで発生する
+            // ease-in-outの場合、実際の90度回転は約200msで発生する（0.4sの50%）
             setTimeout(() => {
-                console.log('Changing color during flip animation at 300ms');
+                console.log('Changing color during flip animation at 200ms');
                 // 既存の色クラスを削除
                 pieceElement.classList.remove('bg-gray-800', 'border-gray-600', 'bg-gray-50', 'border-gray-300');
                 // 新しい色クラスを適用
                 const colorClassArray = newColorClasses.split(' ');
                 pieceElement.classList.add(...colorClassArray);
-            }, 300); // 600msアニメーションの50%時点（300ms）
+            }, 200); // 400msアニメーションの50%時点（200ms）
             
             // アニメーション終了後にクラスを削除
             setTimeout(() => {
@@ -480,7 +484,7 @@ class GameUI {
                 if (onComplete) {
                     onComplete();
                 }
-            }, 600);
+            }, 400);
         } else {
             // 通常のフリップアニメーション（色変更なし）
             pieceElement.classList.add('piece-flip');
@@ -489,7 +493,7 @@ class GameUI {
                 if (onComplete) {
                     onComplete();
                 }
-            }, 600);
+            }, 400);
         }
     }
 
@@ -513,7 +517,7 @@ class GameUI {
                 opacity: '1' 
             }
         ], {
-            duration: 800,
+            duration: 500,
             easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
             fill: 'both'
         });
@@ -555,7 +559,7 @@ class GameUI {
                 boxShadow: '0 0 0 0 rgba(59, 130, 246, 0)'
             }
         ], {
-            duration: 1000,
+            duration: 700,
             easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
             fill: 'both'
         });
@@ -576,7 +580,7 @@ class GameUI {
                 backgroundColor: 'rgb(22, 163, 74)'
             }
         ], {
-            duration: 1200,
+            duration: 800,
             easing: 'ease-out',
             fill: 'both'
         });
@@ -599,6 +603,9 @@ class GameUI {
             return;
         }
         
+        // プレイヤーが手を打つ前に有効手のアニメーションを消去
+        this.hideValidMovesWithAnimation();
+        
         // makeMove前の盤面状態を保存
         const preMoveBoard = this.game.getBoard().map(row => [...row]);
         
@@ -614,7 +621,7 @@ class GameUI {
                     // プレイヤーのアニメーション完了後、少し間を置いてからNPCの手を実行
                     setTimeout(() => {
                         this.makeNPCMove();
-                    }, 300);
+                    }, 150);
                 }
             };
             
@@ -653,12 +660,19 @@ class GameUI {
             const flippedPieces = this.game.makeMove(npcMove.row, npcMove.col);
             if (flippedPieces !== false) {
                 this.updateNPCTurnState();
-                this.updateBoardDisplay(flippedPieces, {row: npcMove.row, col: npcMove.col}, true, preMoveBoard);
-                this.updateUI();
                 
-                if (this.game.isGameOver()) {
-                    this.showGameOver();
-                }
+                // NPCアニメーション完了後にプレイヤーの有効手を表示
+                const onNPCAnimationComplete = () => {
+                    if (this.game.isGameOver()) {
+                        this.showGameOver();
+                    } else {
+                        // NPCのアニメーションが完了したら、プレイヤーの有効手を遅延表示
+                        this.showValidMovesWithAnimation(100); // 100ms後に表示開始（さらに短縮）
+                    }
+                };
+                
+                this.updateBoardDisplay(flippedPieces, {row: npcMove.row, col: npcMove.col}, true, preMoveBoard, onNPCAnimationComplete);
+                this.updateUI();
             }
         } catch (error) {
             console.error('NPCの手の実行中にエラーが発生しました:', error);
@@ -715,11 +729,74 @@ class GameUI {
         this.updateNPCTurnState();
         this.updateUI();
         
+        // リスタート時にプレイヤーの有効手を表示
+        if (!this.isNPCTurn) {
+            this.showValidMovesWithAnimation(150); // 150ms後に表示開始（さらに短縮）
+        }
+        
         // 新しいゲーム開始時にNPCの情報を再表示
         if (this.isNPCEnabled) {
             const npcInfo = this.npcManager.getCurrentStrategyInfo();
             console.log(`新しいゲーム開始 - NPC戦略: ${npcInfo.name} (${npcInfo.difficulty})`);
         }
+    }
+    
+    /**
+     * プレイヤーの有効手を段階的にアニメーション表示
+     * @param delay 表示開始までの遅延（ミリ秒）
+     */
+    private showValidMovesWithAnimation(delay: number = 0): void {
+        if (this.isNPCTurn) {
+            return; // NPCターン中は表示しない
+        }
+        
+        const validMoves = this.game.getValidMoves();
+        const cells = this.boardElement.children;
+        
+        setTimeout(() => {
+            validMoves.forEach((move, index) => {
+                const cellIndex = move.row * 8 + move.col;
+                const cellElement = cells[cellIndex] as HTMLElement;
+                
+                if (cellElement) {
+                    // 有効手を少しずつ遅延させて表示
+                    setTimeout(() => {
+                        cellElement.classList.remove('bg-green-600');
+                        cellElement.classList.add('bg-lime-500', 'valid-move-highlight', 'valid-move-appear');
+                        
+                        // アニメーション終了後にクラスを削除
+                        setTimeout(() => {
+                            cellElement.classList.remove('valid-move-appear');
+                        }, 200);
+                    }, index * 30); // 30msずつ遅延（さらに短縮）
+                }
+            });
+        }, delay);
+    }
+    
+    /**
+     * 有効手の表示を消去
+     */
+    private hideValidMovesWithAnimation(): void {
+        const validMoves = this.game.getValidMoves();
+        const cells = this.boardElement.children;
+        
+        validMoves.forEach((move, index) => {
+            const cellIndex = move.row * 8 + move.col;
+            const cellElement = cells[cellIndex] as HTMLElement;
+            
+            if (cellElement && cellElement.classList.contains('valid-move-highlight')) {
+                setTimeout(() => {
+                    cellElement.classList.add('valid-move-disappear');
+                    
+                    // アニメーション終了後にクラスを削除
+                    setTimeout(() => {
+                        cellElement.classList.remove('bg-lime-500', 'valid-move-highlight', 'valid-move-disappear');
+                        cellElement.classList.add('bg-green-600');
+                    }, 200);
+                }, index * 30); // 30msずつ遅延（短縮）
+            }
+        });
     }
 }
 
