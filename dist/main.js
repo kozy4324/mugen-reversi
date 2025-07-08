@@ -3,7 +3,8 @@ import { NPCManager } from './strategies/NPCManager.js';
 import { Player } from './strategies/base/NPCStrategy.js';
 // ゲームの状態を管理するクラス
 class ReversiGame {
-    constructor() {
+    constructor(boardSize = 8) {
+        this.boardSize = boardSize;
         this.board = [];
         this.currentPlayer = Player.BLACK;
         this.gameOver = false;
@@ -11,18 +12,19 @@ class ReversiGame {
     }
     // 盤面の初期化
     initializeBoard() {
-        // 8x8の盤面を初期化
-        this.board = Array(8).fill(null).map(() => Array(8).fill(Player.EMPTY));
-        // 初期配置
-        this.board[3][3] = Player.WHITE;
-        this.board[3][4] = Player.BLACK;
-        this.board[4][3] = Player.BLACK;
-        this.board[4][4] = Player.WHITE;
+        // 可変サイズの盤面を初期化
+        this.board = Array(this.boardSize).fill(null).map(() => Array(this.boardSize).fill(Player.EMPTY));
+        // 初期配置（中央4マス）
+        const center = Math.floor(this.boardSize / 2);
+        this.board[center - 1][center - 1] = Player.WHITE;
+        this.board[center - 1][center] = Player.BLACK;
+        this.board[center][center - 1] = Player.BLACK;
+        this.board[center][center] = Player.WHITE;
     }
     // 有効な手があるかチェック
     hasValidMoves(player) {
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
                 if (this.isValidMove(row, col, player)) {
                     return true;
                 }
@@ -54,7 +56,7 @@ class ReversiGame {
         let r = row + dr;
         let c = col + dc;
         let hasOpponentPiece = false;
-        while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        while (r >= 0 && r < this.boardSize && c >= 0 && c < this.boardSize) {
             if (this.board[r][c] === Player.EMPTY) {
                 return false;
             }
@@ -106,7 +108,7 @@ class ReversiGame {
         let r = row + dr;
         let c = col + dc;
         const flippedPieces = [];
-        while (r >= 0 && r < 8 && c >= 0 && c < 8 && this.board[r][c] === opponent) {
+        while (r >= 0 && r < this.boardSize && c >= 0 && c < this.boardSize && this.board[r][c] === opponent) {
             this.board[r][c] = player;
             flippedPieces.push({ row: r, col: c });
             r += dr;
@@ -137,8 +139,8 @@ class ReversiGame {
     getScore() {
         let black = 0;
         let white = 0;
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
                 if (this.board[row][col] === Player.BLACK) {
                     black++;
                 }
@@ -168,8 +170,8 @@ class ReversiGame {
     // 有効な手をすべて取得
     getValidMoves() {
         const validMoves = [];
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
                 if (this.isValidMove(row, col, this.currentPlayer)) {
                     validMoves.push({ row, col });
                 }
@@ -187,8 +189,23 @@ class ReversiGame {
     isGameOver() {
         return this.gameOver;
     }
+    getBoardSize() {
+        return this.boardSize;
+    }
     // ゲームリセット
     reset() {
+        this.gameOver = false;
+        this.currentPlayer = Player.BLACK;
+        this.initializeBoard();
+    }
+    // 盤面サイズを変更してリセット（将来的な機能）
+    resetWithSize(newSize) {
+        if (newSize < 4 || newSize % 2 !== 0) {
+            throw new Error('盤面サイズは4以上の偶数である必要があります');
+        }
+        // 注意: このメソッドは現在の実装では制限があります
+        // 完全なサイズ変更には新しいReversiGameインスタンスが必要です
+        console.warn('盤面サイズの動的変更は現在の実装では制限があります。新しいゲームインスタンスを作成することをお勧めします。');
         this.gameOver = false;
         this.currentPlayer = Player.BLACK;
         this.initializeBoard();
@@ -196,8 +213,8 @@ class ReversiGame {
 }
 // UI管理クラス
 class GameUI {
-    constructor() {
-        this.game = new ReversiGame();
+    constructor(boardSize = 8) {
+        this.game = new ReversiGame(boardSize);
         this.npcManager = new NPCManager();
         this.isNPCEnabled = true; // デフォルトでNPCを有効にする
         this.isNPCTurn = false;
@@ -247,7 +264,7 @@ class GameUI {
     renderBoard() {
         this.boardElement.innerHTML = '';
         // 動的にグリッドサイズを設定
-        const boardSize = 8; // 現在は8x8固定だが、将来的に動的に変更可能
+        const boardSize = this.game.getBoardSize();
         this.boardElement.style.gridTemplateColumns = `repeat(${boardSize}, minmax(0, 1fr))`;
         this.boardElement.style.gridTemplateRows = `repeat(${boardSize}, minmax(0, 1fr))`;
         for (let row = 0; row < boardSize; row++) {
@@ -264,16 +281,17 @@ class GameUI {
     }
     updateBoardDisplay(flippedPieces = [], newPiecePosition, isNPCMove = false, preMoveBoard, onAnimationComplete) {
         const board = this.game.getBoard();
+        const boardSize = this.game.getBoardSize();
         const validMoves = this.game.getValidMoves();
         const cells = this.boardElement.children;
         // フリップされる石の位置を記録（アニメーション前の色を保持するため）
         const flippedPositions = new Set(flippedPieces.map(p => `${p.row},${p.col}`));
         Array.from(cells).forEach((cell, index) => {
-            const row = Math.floor(index / 8);
-            const col = index % 8;
+            const row = Math.floor(index / boardSize);
+            const col = index % boardSize;
             const piece = board[row][col];
             const positionKey = `${row},${col}`;
-            // 既存のpiece要素を削除
+            // ...existing code...
             const existingPiece = cell.querySelector('div');
             if (existingPiece) {
                 existingPiece.remove();
@@ -319,7 +337,8 @@ class GameUI {
         });
         // 新しく置かれた石にアニメーションを適用（DOM更新後に実行）
         if (newPiecePosition) {
-            const cellIndex = newPiecePosition.row * 8 + newPiecePosition.col;
+            const boardSize = this.game.getBoardSize();
+            const cellIndex = newPiecePosition.row * boardSize + newPiecePosition.col;
             const targetCell = cells[cellIndex];
             const pieceElement = targetCell.querySelector('div');
             if (pieceElement) {
@@ -353,6 +372,7 @@ class GameUI {
     // 複数の石にフリップアニメーションを適用
     applyFlipAnimationsToMultiplePieces(flippedPieces, cells, onAllComplete) {
         const board = this.game.getBoard();
+        const boardSize = this.game.getBoardSize();
         if (flippedPieces.length === 0) {
             // フリップする石がない場合は即座にコールバックを実行
             if (onAllComplete) {
@@ -362,7 +382,7 @@ class GameUI {
         }
         let completedCount = 0;
         flippedPieces.forEach((flipped, index) => {
-            const cellIndex = flipped.row * 8 + flipped.col;
+            const cellIndex = flipped.row * boardSize + flipped.col;
             const cell = cells[cellIndex];
             const pieceElement = cell.querySelector('div');
             if (pieceElement) {
@@ -564,13 +584,14 @@ class GameUI {
      */
     getNearestValidCell(event) {
         const rect = this.boardElement.getBoundingClientRect();
-        const cellSize = rect.width / 8; // 8x8の盤面
+        const boardSize = this.game.getBoardSize();
+        const cellSize = rect.width / boardSize;
         // マウス座標を盤面内の相対座標に変換
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         // クリック位置に最も近いセルを計算
-        const targetCol = Math.max(0, Math.min(7, Math.floor(x / cellSize)));
-        const targetRow = Math.max(0, Math.min(7, Math.floor(y / cellSize)));
+        const targetCol = Math.max(0, Math.min(boardSize - 1, Math.floor(x / cellSize)));
+        const targetRow = Math.max(0, Math.min(boardSize - 1, Math.floor(y / cellSize)));
         // 有効な手のリストを取得
         const validMoves = this.game.getValidMoves();
         // ターゲットセルが有効な手の場合はそのまま返す
@@ -606,7 +627,8 @@ class GameUI {
     showTargetLock(row, col) {
         // 既存のターゲットロックを削除
         this.hideTargetLock();
-        const cellIndex = row * 8 + col;
+        const boardSize = this.game.getBoardSize();
+        const cellIndex = row * boardSize + col;
         const targetCell = this.boardElement.children[cellIndex];
         if (targetCell) {
             // セルに強調表示クラスを追加
@@ -782,6 +804,28 @@ class GameUI {
         }
     }
     /**
+     * 新しい盤面サイズでゲームを再開始（将来的な機能）
+     * @param newSize 新しい盤面サイズ
+     */
+    restartWithNewSize(newSize) {
+        if (newSize < 4 || newSize % 2 !== 0) {
+            throw new Error('盤面サイズは4以上の偶数である必要があります');
+        }
+        // 新しいサイズでゲームインスタンスを再作成
+        this.game = new ReversiGame(newSize);
+        this.isNPCTurn = false;
+        this.hideTargetLock();
+        this.gameOverElement.classList.add('hidden');
+        this.renderBoard();
+        this.updateNPCTurnState();
+        this.updateUI();
+        // プレイヤーの有効手を表示
+        if (!this.isNPCTurn) {
+            this.showValidMovesWithAnimation(150);
+        }
+        console.log(`新しい盤面サイズ${newSize}x${newSize}でゲーム開始`);
+    }
+    /**
      * プレイヤーの有効手を段階的にアニメーション表示
      * @param delay 表示開始までの遅延（ミリ秒）
      */
@@ -790,10 +834,11 @@ class GameUI {
             return; // NPCターン中は表示しない
         }
         const validMoves = this.game.getValidMoves();
+        const boardSize = this.game.getBoardSize();
         const cells = this.boardElement.children;
         setTimeout(() => {
             validMoves.forEach((move, index) => {
-                const cellIndex = move.row * 8 + move.col;
+                const cellIndex = move.row * boardSize + move.col;
                 const cellElement = cells[cellIndex];
                 if (cellElement) {
                     // 有効手を少しずつ遅延させて表示
@@ -814,9 +859,10 @@ class GameUI {
      */
     hideValidMovesWithAnimation() {
         const validMoves = this.game.getValidMoves();
+        const boardSize = this.game.getBoardSize();
         const cells = this.boardElement.children;
         validMoves.forEach((move, index) => {
-            const cellIndex = move.row * 8 + move.col;
+            const cellIndex = move.row * boardSize + move.col;
             const cellElement = cells[cellIndex];
             if (cellElement && cellElement.classList.contains('valid-move-highlight')) {
                 setTimeout(() => {
@@ -866,6 +912,6 @@ class GameUI {
 // ゲーム開始
 document.addEventListener('DOMContentLoaded', () => {
     console.log('mugen-reversi initialized');
-    const gameUI = new GameUI();
+    const gameUI = new GameUI(); // デフォルト8x8
     gameUI.start();
 });
