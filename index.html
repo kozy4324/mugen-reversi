@@ -8,21 +8,19 @@
 </head>
 <body>
     <div id="app" class="flex flex-col justify-center items-center min-h-screen bg-green-100 p-4">
-        <h1 class="text-4xl font-bold text-green-800 mb-8">オセロ (Reversi)</h1>
-        
-        <div class="game-info mb-4 text-center">
-            <div class="flex justify-center gap-8 mb-4">
-                <div class="player-info">
-                    <span class="font-semibold">黒 (先手)</span>
-                    <div class="score text-2xl font-bold" id="black-score">2</div>
+        <!-- スコア表示を画面左上に固定 -->
+        <div class="fixed top-4 left-4 bg-white border border-gray-300 rounded-lg p-3 shadow-md z-10">
+            <div class="flex gap-6 text-sm">
+                <div class="player-info flex items-center gap-2">
+                    <div class="w-4 h-4 bg-gray-800 rounded-full border border-gray-600"></div>
+                    <span class="font-semibold">黒</span>
+                    <div class="score text-lg font-bold" id="black-score">2</div>
                 </div>
-                <div class="player-info">
-                    <span class="font-semibold">白 (後手)</span>
-                    <div class="score text-2xl font-bold" id="white-score">2</div>
+                <div class="player-info flex items-center gap-2">
+                    <div class="w-4 h-4 bg-gray-50 rounded-full border border-gray-300"></div>
+                    <span class="font-semibold">白</span>
+                    <div class="score text-lg font-bold" id="white-score">2</div>
                 </div>
-            </div>
-            <div class="current-player text-xl font-semibold" id="current-player">
-                現在のプレイヤー: <span id="current-player-color">黒</span>
             </div>
         </div>
         
@@ -30,25 +28,29 @@
             <!-- Game board will be dynamically rendered here -->
         </div>
         
-        <div class="controls mt-6 flex flex-col gap-4 items-center">
-            <div class="board-size-control flex items-center gap-3">
-                <label for="board-size-select" class="font-semibold text-green-800">盤面サイズ:</label>
-                <select id="board-size-select" class="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="4">4×4</option>
-                    <option value="6">6×6</option>
-                    <option value="8" selected>8×8</option>
-                    <option value="10">10×10</option>
-                    <option value="12">12×12</option>
-                </select>
+        <!-- コントロールを画面右下に固定 -->
+        <div class="fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg p-3 shadow-md z-10">
+            <div class="flex flex-col gap-3 items-end">
+                <div class="board-size-control flex items-center gap-2">
+                    <label for="board-size-select" class="font-semibold text-gray-700 text-sm">盤面サイズ:</label>
+                    <select id="board-size-select" class="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="4">4×4</option>
+                        <option value="6">6×6</option>
+                        <option value="8" selected>8×8</option>
+                        <option value="10">10×10</option>
+                        <option value="12">12×12</option>
+                    </select>
+                </div>
+                <button id="restart-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded text-sm transition-colors">
+                    ゲームリスタート
+                </button>
             </div>
-            <button id="restart-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                ゲームリスタート
-            </button>
         </div>
         
-        <div id="game-over" class="game-over hidden mt-4 p-4 bg-yellow-100 border border-yellow-400 rounded text-center">
-            <h2 class="text-2xl font-bold mb-2">ゲーム終了</h2>
-            <div id="winner" class="text-lg"></div>
+        <!-- ゲーム終了表示を画面上部中央に固定 -->
+        <div id="game-over" class="game-over hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-white border border-yellow-400 rounded-lg p-4 shadow-lg z-20 text-center">
+            <h2 class="text-xl font-bold mb-2 text-gray-800">ゲーム終了</h2>
+            <div id="winner" class="text-lg font-semibold text-yellow-600"></div>
         </div>
     </div>
     <script src="./dist/main.js" type="module"></script>
