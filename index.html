@@ -30,7 +30,17 @@
             <!-- Game board will be dynamically rendered here -->
         </div>
         
-        <div class="controls mt-6">
+        <div class="controls mt-6 flex flex-col gap-4 items-center">
+            <div class="board-size-control flex items-center gap-3">
+                <label for="board-size-select" class="font-semibold text-green-800">盤面サイズ:</label>
+                <select id="board-size-select" class="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="4">4×4</option>
+                    <option value="6">6×6</option>
+                    <option value="8" selected>8×8</option>
+                    <option value="10">10×10</option>
+                    <option value="12">12×12</option>
+                </select>
+            </div>
             <button id="restart-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 ゲームリスタート
             </button>

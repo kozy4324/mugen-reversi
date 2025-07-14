@@ -264,6 +264,7 @@ class GameUI {
     private gameOverElement!: HTMLElement;
     private winnerElement!: HTMLElement;
     private restartButton!: HTMLElement;
+    private boardSizeSelect!: HTMLSelectElement;
     private targetLockElement!: HTMLElement | null;
     
     constructor(boardSize: number = 8) {
@@ -284,11 +285,17 @@ class GameUI {
         this.gameOverElement = document.getElementById('game-over')!;
         this.winnerElement = document.getElementById('winner')!;
         this.restartButton = document.getElementById('restart-btn')!;
+        this.boardSizeSelect = document.getElementById('board-size-select')! as HTMLSelectElement;
     }
     
     private setupEventListeners(): void {
         this.restartButton.addEventListener('click', () => {
             this.restartGame();
+        });
+        
+        // 盤面サイズ変更のイベントリスナー
+        this.boardSizeSelect.addEventListener('change', () => {
+            this.handleBoardSizeChange();
         });
         
         // 盤面全体にイベントリスナーを追加
@@ -310,6 +317,9 @@ class GameUI {
         this.renderBoard();
         this.updateNPCTurnState();
         this.updateUI();
+        
+        // セレクトボックスの値を現在の盤面サイズに設定
+        this.boardSizeSelect.value = this.game.getBoardSize().toString();
         
         // ゲーム開始時にプレイヤーの有効手を表示
         if (!this.isNPCTurn) {
@@ -1064,11 +1074,35 @@ class GameUI {
             }, 67);
         }
     }
+    
+    /**
+     * 盤面サイズ変更時の処理
+     */
+    private handleBoardSizeChange(): void {
+        const selectedSize = parseInt(this.boardSizeSelect.value);
+        const currentSize = this.game.getBoardSize();
+        
+        if (selectedSize !== currentSize) {
+            // 現在の盤面サイズをローカルストレージに保存
+            localStorage.setItem('mugen-reversi-board-size', selectedSize.toString());
+            
+            // ページをリロードしてゲームを新しいサイズで開始
+            window.location.reload();
+        }
+    }
 }
 
 // ゲーム開始
 document.addEventListener('DOMContentLoaded', () => {
     console.log('mugen-reversi initialized');
-    const gameUI = new GameUI(); // デフォルト8x8
+    
+    // ローカルストレージから保存された盤面サイズを取得（デフォルトは8）
+    const savedBoardSize = localStorage.getItem('mugen-reversi-board-size');
+    const boardSize = savedBoardSize ? parseInt(savedBoardSize) : 8;
+    
+    // 盤面サイズが有効な値かチェック（4以上の偶数）
+    const validBoardSize = (boardSize >= 4 && boardSize % 2 === 0) ? boardSize : 8;
+    
+    const gameUI = new GameUI(validBoardSize);
     gameUI.start();
 });
