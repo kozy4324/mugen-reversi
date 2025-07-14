@@ -763,9 +763,6 @@ class GameUI {
                     <div class="h-1 w-6 bg-red-500 absolute"></div>
                     <div class="w-2 h-2 bg-red-500 rounded-full border border-red-300"></div>
                 </div>
-                <div class="absolute top-1 left-1 text-xs text-red-500 font-bold bg-white bg-opacity-80 px-1 rounded">
-                    ${row + 1}-${col + 1}
-                </div>
             `;
             
             targetCell.style.position = 'relative';
