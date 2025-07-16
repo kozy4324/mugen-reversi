@@ -7,10 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "build:css": "npx tailwindcss-cli -i ./src/styles.css -o ./dist/output.css",
-    "start": "npm run build:all && live-server ./ --port=8080",
+    "start": "npm run build:all && serve . -l 8080",
     "build:all": "npm run build && npm run build:css",
     "watch": "nodemon --watch src --ext ts,css --exec \"npm run build:all\"",
-    "dev": "npm run build:all && npm run watch & live-server ./ --port=8080"
+    "dev": "npm run build:all && npm run watch & serve . -l 8080"
   },
   "repository": {
     "type": "git",
@@ -25,9 +25,9 @@
   "homepage": "https://github.com/kozy4324/mugen-reversi#readme",
   "devDependencies": {
     "autoprefixer": "^10.4.21",
-    "live-server": "^1.2.2",
     "nodemon": "^3.1.10",
     "postcss": "^8.5.6",
+    "serve": "^14.2.4",
     "tailwindcss": "^4.1.10",
     "tailwindcss-cli": "^0.1.2",
     "typescript": "^5.8.3"
