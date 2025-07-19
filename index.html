@@ -28,25 +28,6 @@
             <!-- Game board will be dynamically rendered here -->
         </div>
         
-        <!-- コントロールを画面右下に固定 -->
-        <div class="fixed bottom-4 right-4 bg-white border border-gray-300 rounded-lg p-3 shadow-md z-10">
-            <div class="flex flex-col gap-3 items-end">
-                <div class="board-size-control flex items-center gap-2">
-                    <label for="board-size-select" class="font-semibold text-gray-700 text-sm">盤面サイズ:</label>
-                    <select id="board-size-select" class="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="4">4×4</option>
-                        <option value="6">6×6</option>
-                        <option value="8" selected>8×8</option>
-                        <option value="10">10×10</option>
-                        <option value="12">12×12</option>
-                    </select>
-                </div>
-                <button id="restart-btn" class="bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded text-sm transition-colors">
-                    ゲームリスタート
-                </button>
-            </div>
-        </div>
-        
         <!-- ゲーム終了表示を画面上部中央に固定 -->
         <div id="game-over" class="game-over hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-white border border-yellow-400 rounded-lg p-4 shadow-lg z-20 text-center">
             <h2 class="text-xl font-bold mb-2 text-gray-800">ゲーム終了</h2>
