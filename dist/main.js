@@ -76,6 +76,15 @@ class ReversiGame {
         if (this.gameOver || !this.isValidMove(row, col, this.currentPlayer)) {
             return false;
         }
+        // 盤面拡張が必要かチェック
+        const expansionNeeded = this.checkBoardExpansion(row, col);
+        // 盤面拡張を実行
+        if (expansionNeeded.needsExpansion) {
+            this.expandBoard(expansionNeeded);
+            // 拡張後の座標を調整
+            row += expansionNeeded.adjustRow;
+            col += expansionNeeded.adjustCol;
+        }
         // 石を置く
         this.board[row][col] = this.currentPlayer;
         // 石をひっくり返す
@@ -192,10 +201,109 @@ class ReversiGame {
     getBoardSize() {
         return this.boardSize;
     }
+    // 盤面拡張が必要かチェック
+    checkBoardExpansion(row, col) {
+        // 石を置いた後、その位置から相手の石をひっくり返した結果、
+        // 盤面の端まで到達するかチェック
+        const opponent = this.currentPlayer === Player.BLACK ? Player.WHITE : Player.BLACK;
+        let needsTop = false;
+        let needsBottom = false;
+        let needsLeft = false;
+        let needsRight = false;
+        // 各方向をチェックして、ひっくり返した結果端に到達するかチェック
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1], [0, 1],
+            [1, -1], [1, 0], [1, 1]
+        ];
+        for (const [dr, dc] of directions) {
+            if (this.canFlipInDirection(row, col, dr, dc, this.currentPlayer)) {
+                let r = row + dr;
+                let c = col + dc;
+                // この方向で石をひっくり返していき、端に到達するかチェック
+                while (r >= 0 && r < this.boardSize && c >= 0 && c < this.boardSize && this.board[r][c] === opponent) {
+                    r += dr;
+                    c += dc;
+                }
+                // 石を配置する位置、またはひっくり返した最終位置が端の場合、拡張が必要
+                if (row === 0 || r <= 0)
+                    needsTop = true;
+                if (row === this.boardSize - 1 || r >= this.boardSize - 1)
+                    needsBottom = true;
+                if (col === 0 || c <= 0)
+                    needsLeft = true;
+                if (col === this.boardSize - 1 || c >= this.boardSize - 1)
+                    needsRight = true;
+            }
+        }
+        // 石を配置する位置自体が端の場合も拡張
+        if (row === 0)
+            needsTop = true;
+        if (row === this.boardSize - 1)
+            needsBottom = true;
+        if (col === 0)
+            needsLeft = true;
+        if (col === this.boardSize - 1)
+            needsRight = true;
+        const needsExpansion = needsTop || needsBottom || needsLeft || needsRight;
+        return {
+            needsExpansion,
+            expandTop: needsTop,
+            expandBottom: needsBottom,
+            expandLeft: needsLeft,
+            expandRight: needsRight,
+            adjustRow: needsTop ? 1 : 0,
+            adjustCol: needsLeft ? 1 : 0
+        };
+    }
+    // 盤面を拡張
+    expandBoard(expansion) {
+        const oldSize = this.boardSize;
+        // 新しいサイズを計算（各方向に1つずつ拡張）
+        let newRowCount = oldSize;
+        let newColCount = oldSize;
+        if (expansion.expandTop)
+            newRowCount++;
+        if (expansion.expandBottom)
+            newRowCount++;
+        if (expansion.expandLeft)
+            newColCount++;
+        if (expansion.expandRight)
+            newColCount++;
+        // 正方形を保つため、大きい方に合わせる
+        const newSize = Math.max(newRowCount, newColCount);
+        const newBoard = Array(newSize).fill(null).map(() => Array(newSize).fill(Player.EMPTY));
+        // 既存の盤面をコピー（適切なオフセットで配置）
+        const rowOffset = expansion.expandTop ? 1 : 0;
+        const colOffset = expansion.expandLeft ? 1 : 0;
+        for (let row = 0; row < oldSize; row++) {
+            for (let col = 0; col < oldSize; col++) {
+                newBoard[rowOffset + row][colOffset + col] = this.board[row][col];
+            }
+        }
+        this.board = newBoard;
+        this.boardSize = newSize;
+        console.log(`Board expanded from ${oldSize}x${oldSize} to ${newSize}x${newSize}`, {
+            expandTop: expansion.expandTop,
+            expandBottom: expansion.expandBottom,
+            expandLeft: expansion.expandLeft,
+            expandRight: expansion.expandRight,
+            rowOffset,
+            colOffset
+        });
+    }
+    // 盤面の現在のサイズを取得（UIが更新を検知するため）
+    getBoardChanges() {
+        return {
+            sizeChanged: true, // 実際には前回との比較が必要だが、シンプルにするため常にtrueを返す
+            newSize: this.boardSize
+        };
+    }
     // ゲームリセット
     reset() {
         this.gameOver = false;
         this.currentPlayer = Player.BLACK;
+        this.boardSize = 8; // 初期サイズにリセット
         this.initializeBoard();
     }
     // 盤面サイズを変更してリセット（将来的な機能）
@@ -275,12 +383,28 @@ class GameUI {
         const boardSize = this.game.getBoardSize();
         this.boardElement.style.gridTemplateColumns = `repeat(${boardSize}, minmax(0, 1fr))`;
         this.boardElement.style.gridTemplateRows = `repeat(${boardSize}, minmax(0, 1fr))`;
+        // 動的グリッドクラスを追加
+        this.boardElement.className = 'dynamic-grid w-full max-w-lg aspect-square p-2 bg-green-800 rounded-lg shadow-lg';
+        // ボード拡張アニメーションを追加
+        this.boardElement.classList.add('board-expansion');
+        // アニメーション完了後にクラスを削除
+        setTimeout(() => {
+            this.boardElement.classList.remove('board-expansion');
+        }, 500);
         for (let row = 0; row < boardSize; row++) {
             for (let col = 0; col < boardSize; col++) {
                 const cell = document.createElement('div');
                 cell.className = 'bg-green-600 border border-green-700 rounded flex items-center justify-center transition-colors duration-200 ease-in-out';
                 cell.dataset.row = row.toString();
                 cell.dataset.col = col.toString();
+                // 新しく追加されたセルにアニメーションを適用（端のセルを判定）
+                if (boardSize > 8 && (row === 0 || row === boardSize - 1 || col === 0 || col === boardSize - 1)) {
+                    cell.classList.add('new-cell-appear');
+                    // アニメーション完了後にクラスを削除
+                    setTimeout(() => {
+                        cell.classList.remove('new-cell-appear');
+                    }, 400);
+                }
                 // 個別のセルクリックイベントは削除（盤面全体で処理するため）
                 this.boardElement.appendChild(cell);
             }
@@ -781,8 +905,12 @@ class GameUI {
         this.hideTargetLock();
         // makeMove前の盤面状態を保存
         const preMoveBoard = this.game.getBoard().map(row => [...row]);
+        const preMoveSize = this.game.getBoardSize();
         const flippedPieces = this.game.makeMove(row, col);
         if (flippedPieces !== false) {
+            // 盤面サイズが変更されたかチェック
+            const postMoveSize = this.game.getBoardSize();
+            const boardExpanded = postMoveSize !== preMoveSize;
             this.updateNPCTurnState();
             // アニメーション完了後にNPCの手を実行するコールバック
             const onAnimationComplete = () => {
@@ -799,8 +927,17 @@ class GameUI {
                     }, 200); // 200msに延長してアニメーション完了を確実に待つ
                 }
             };
-            this.updateBoardDisplay(flippedPieces, { row, col }, false, preMoveBoard, onAnimationComplete);
-            this.updateUI();
+            // 盤面が拡張された場合は完全に再描画
+            if (boardExpanded) {
+                console.log(`Board expanded from ${preMoveSize}x${preMoveSize} to ${postMoveSize}x${postMoveSize}`);
+                this.renderBoard();
+                this.updateUI();
+                onAnimationComplete();
+            }
+            else {
+                this.updateBoardDisplay(flippedPieces, { row, col }, false, preMoveBoard, onAnimationComplete);
+                this.updateUI();
+            }
         }
     }
     /**
@@ -825,8 +962,12 @@ class GameUI {
             console.log(`NPC selected move: (${npcMove.row}, ${npcMove.col})`);
             // makeMove前の盤面状態を保存
             const preMoveBoard = this.game.getBoard().map(row => [...row]);
+            const preMoveSize = this.game.getBoardSize();
             const flippedPieces = this.game.makeMove(npcMove.row, npcMove.col);
             if (flippedPieces !== false) {
+                // 盤面サイズが変更されたかチェック
+                const postMoveSize = this.game.getBoardSize();
+                const boardExpanded = postMoveSize !== preMoveSize;
                 this.updateNPCTurnState();
                 // NPCアニメーション完了後にプレイヤーの有効手を表示
                 const onNPCAnimationComplete = () => {
@@ -840,8 +981,17 @@ class GameUI {
                         this.showValidMovesWithAnimation(100); // 100msに短縮（但し確実に待つ）
                     }
                 };
-                this.updateBoardDisplay(flippedPieces, { row: npcMove.row, col: npcMove.col }, true, preMoveBoard, onNPCAnimationComplete);
-                this.updateUI();
+                // 盤面が拡張された場合は完全に再描画
+                if (boardExpanded) {
+                    console.log(`Board expanded by NPC from ${preMoveSize}x${preMoveSize} to ${postMoveSize}x${postMoveSize}`);
+                    this.renderBoard();
+                    this.updateUI();
+                    onNPCAnimationComplete();
+                }
+                else {
+                    this.updateBoardDisplay(flippedPieces, { row: npcMove.row, col: npcMove.col }, true, preMoveBoard, onNPCAnimationComplete);
+                    this.updateUI();
+                }
             }
         }
         catch (error) {
@@ -1027,10 +1177,19 @@ class GameUI {
     updateBoardSizeSelect() {
         const currentBoardSize = this.game.getBoardSize();
         this.boardSizeSelect.value = currentBoardSize.toString();
-        // もし現在の盤面サイズがセレクトボックスのオプションにない場合、8x8にリセット
+        // もし現在の盤面サイズがセレクトボックスのオプションにない場合、カスタムオプションを追加
         const options = Array.from(this.boardSizeSelect.options);
         const hasOption = options.some(option => option.value === currentBoardSize.toString());
-        if (!hasOption) {
+        if (!hasOption && currentBoardSize > 8) {
+            // 動的に拡張されたサイズのオプションを追加
+            const newOption = document.createElement('option');
+            newOption.value = currentBoardSize.toString();
+            newOption.textContent = `${currentBoardSize}x${currentBoardSize} (拡張済み)`;
+            newOption.selected = true;
+            this.boardSizeSelect.appendChild(newOption);
+            console.log(`Added dynamic board size option: ${currentBoardSize}x${currentBoardSize}`);
+        }
+        else if (!hasOption) {
             console.warn(`Invalid board size: ${currentBoardSize}. Resetting to 8x8.`);
             this.boardSizeSelect.value = '8';
             // ローカルストレージも更新

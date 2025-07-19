@@ -88,6 +88,57 @@
 .dynamic-grid {
     display: grid;
     gap: 0.125rem; /* gap-0.5 相当 */
+    transition: grid-template-columns 0.3s ease-in-out, grid-template-rows 0.3s ease-in-out;
+    aspect-ratio: 1 / 1; /* 強制的に正方形にする */
+    width: 100%;
+    height: auto;
+}
+
+.dynamic-grid > div {
+    aspect-ratio: 1 / 1; /* 各セルも正方形にする */
+}
+
+/* 盤面拡張アニメーション */
+.board-expansion {
+    animation: boardExpand 0.5s ease-out;
+}
+
+@keyframes boardExpand {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.02);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 新しく追加されたセルのアニメーション */
+.new-cell-appear {
+    animation: newCellAppear 0.4s ease-out;
+}
+
+@keyframes newCellAppear {
+    0% {
+        background-color: rgba(34, 197, 94, 0.3); /* green-500 with opacity */
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        background-color: rgba(34, 197, 94, 0.6);
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+    100% {
+        background-color: rgb(22, 163, 74); /* green-600 */
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* 有効な手のハイライト効果（TailwindCSSでは表現が困難な複雑なbox-shadow） */
