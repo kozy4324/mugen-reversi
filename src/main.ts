@@ -260,7 +260,6 @@ class GameUI {
     private boardElement!: HTMLElement;
     private blackScoreElement!: HTMLElement;
     private whiteScoreElement!: HTMLElement;
-    private currentPlayerElement!: HTMLElement;
     private gameOverElement!: HTMLElement;
     private winnerElement!: HTMLElement;
     private restartButton!: HTMLElement;
@@ -281,7 +280,6 @@ class GameUI {
         this.boardElement = document.getElementById('game-board')!;
         this.blackScoreElement = document.getElementById('black-score')!;
         this.whiteScoreElement = document.getElementById('white-score')!;
-        this.currentPlayerElement = document.getElementById('current-player-color')!;
         this.gameOverElement = document.getElementById('game-over')!;
         this.winnerElement = document.getElementById('winner')!;
         this.restartButton = document.getElementById('restart-btn')!;
@@ -385,16 +383,25 @@ class GameUI {
                 const pieceElement = document.createElement('div');
                 const baseClasses = 'w-4/5 h-4/5 rounded-full transition-all duration-300 ease-in-out shadow-md';
                 
-                // フリップされる石の場合は、フリップ前の色（preMoveBoard の情報を使用）を表示
                 let colorClasses;
-                if (flippedPositions.has(positionKey) && preMoveBoard) {
+                const isNewPiece = newPiecePosition && newPiecePosition.row === row && newPiecePosition.col === col;
+                const isFlippedPiece = flippedPositions.has(positionKey) && preMoveBoard;
+                
+                if (isFlippedPiece) {
                     // フリップされる石は元の色（preMoveBoard の情報）で表示
                     const originalPiece = preMoveBoard[row][col];
                     colorClasses = originalPiece === Player.BLACK 
                         ? 'bg-gray-800 border-2 border-gray-600' 
                         : 'bg-gray-50 border-2 border-gray-300';
+                } else if (isNewPiece) {
+                    // 新しく配置される石は透明で開始（アニメーション中に色を設定）
+                    console.log(`Creating transparent piece at (${row}, ${col}), isNPC: ${isNPCMove}`);
+                    colorClasses = 'bg-transparent border-transparent'; // border-2を削除
+                    // データ属性で最終的な色を記録
+                    const finalColor = piece === Player.BLACK ? 'black' : 'white';
+                    pieceElement.setAttribute('data-final-color', finalColor);
                 } else {
-                    // 通常の石は現在の色で表示
+                    // 既存の石は現在の色で表示
                     colorClasses = piece === Player.BLACK 
                         ? 'bg-gray-800 border-2 border-gray-600' 
                         : 'bg-gray-50 border-2 border-gray-300';
@@ -464,13 +471,27 @@ class GameUI {
         
         if (flippedPieces.length === 0) {
             // フリップする石がない場合は即座にコールバックを実行
+            console.log('No pieces to flip, calling completion callback immediately');
             if (onAllComplete) {
                 onAllComplete();
             }
             return;
         }
         
+        console.log(`Starting flip animations for ${flippedPieces.length} pieces`);
         let completedCount = 0;
+        const expectedCompletions = flippedPieces.length;
+        
+        const checkAllComplete = () => {
+            completedCount++;
+            console.log(`Flip animation completed: ${completedCount}/${expectedCompletions}`);
+            if (completedCount === expectedCompletions) {
+                console.log('All flip animations completed');
+                if (onAllComplete) {
+                    onAllComplete();
+                }
+            }
+        };
         
         flippedPieces.forEach((flipped, index) => {
             const cellIndex = flipped.row * boardSize + flipped.col;
@@ -486,20 +507,12 @@ class GameUI {
                         ? 'bg-gray-800 border-2 border-gray-600' 
                         : 'bg-gray-50 border-2 border-gray-300';
                     
-                    this.applyFlipAnimation(pieceElement, newColorClasses, () => {
-                        completedCount++;
-                        // 全てのフリップアニメーションが完了したらコールバックを実行
-                        if (completedCount === flippedPieces.length && onAllComplete) {
-                            onAllComplete();
-                        }
-                    });
-                }, index * 10); // 10msずつ遅延（30msから短縮）
+                    this.applyFlipAnimation(pieceElement, newColorClasses, checkAllComplete);
+                }, index * 15); // 15msずつ遅延（10ms→15msに調整）
             } else {
-                completedCount++;
                 // 要素が見つからない場合もカウントを進める
-                if (completedCount === flippedPieces.length && onAllComplete) {
-                    onAllComplete();
-                }
+                console.warn(`Piece element not found at (${flipped.row}, ${flipped.col})`);
+                setTimeout(checkAllComplete, index * 15);
             }
         });
     }
@@ -515,40 +528,78 @@ class GameUI {
             
             pieceElement.classList.add('piece-flip');
             
+            let colorChangeCompleted = false;
+            let animationCompleted = false;
+            
             // アニメーションの正確な中間点（133ms、90度回転の瞬間）で色を変更
             // ease-in-outの場合、実際の90度回転は約67msで発生する（0.133sの50%）
-            setTimeout(() => {
+            const colorChangeTimer = setTimeout(() => {
                 console.log('Changing color during flip animation at 67ms');
                 // 既存の色クラスを削除
                 pieceElement.classList.remove('bg-gray-800', 'border-gray-600', 'bg-gray-50', 'border-gray-300');
                 // 新しい色クラスを適用
                 const colorClassArray = newColorClasses.split(' ');
                 pieceElement.classList.add(...colorClassArray);
+                colorChangeCompleted = true;
             }, 67); // 133msアニメーションの50%時点（67ms）
             
             // アニメーション終了後にクラスを削除
-            setTimeout(() => {
+            const animationTimer = setTimeout(() => {
                 console.log('Flip animation completed');
                 pieceElement.classList.remove('piece-flip');
+                animationCompleted = true;
                 if (onComplete) {
                     onComplete();
                 }
             }, 133);
+            
+            // フォールバックタイマー
+            setTimeout(() => {
+                if (!animationCompleted) {
+                    console.warn('Flip animation timeout, forcing completion');
+                    clearTimeout(colorChangeTimer);
+                    clearTimeout(animationTimer);
+                    if (!colorChangeCompleted && newColorClasses) {
+                        pieceElement.classList.remove('bg-gray-800', 'border-gray-600', 'bg-gray-50', 'border-gray-300');
+                        const colorClassArray = newColorClasses.split(' ');
+                        pieceElement.classList.add(...colorClassArray);
+                    }
+                    pieceElement.classList.remove('piece-flip');
+                    if (onComplete) {
+                        onComplete();
+                    }
+                }
+            }, 150); // 133ms + バッファー
         } else {
             // 通常のフリップアニメーション（色変更なし）
             pieceElement.classList.add('piece-flip');
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 pieceElement.classList.remove('piece-flip');
                 if (onComplete) {
                     onComplete();
                 }
             }, 133);
+            
+            // フォールバック
+            setTimeout(() => {
+                clearTimeout(timer);
+                pieceElement.classList.remove('piece-flip');
+                if (onComplete) {
+                    onComplete();
+                }
+            }, 150);
         }
     }
 
     // 石の配置アニメーションを適用（プレイヤー用）
     private applyPlaceAnimation(pieceElement: HTMLElement, onComplete?: () => void): void {
-        console.log('Applying player place animation');
+        console.log('Starting player place animation');
+        
+        // データ属性から最終的な色を取得
+        const finalColor = pieceElement.getAttribute('data-final-color');
+        const finalColorClasses = finalColor === 'black' 
+            ? 'bg-gray-800 border-2 border-gray-600'
+            : 'bg-gray-50 border-2 border-gray-300';
         
         // Web Animations APIを使用してアニメーションを確実に実行
         const animation = pieceElement.animate([
@@ -572,16 +623,35 @@ class GameUI {
         });
         
         animation.onfinish = () => {
-            console.log('Player animation finished');
+            console.log('Player place animation completed - now setting color');
+            // アニメーション完了後に色を設定
+            pieceElement.classList.remove('bg-transparent', 'border-transparent');
+            const colorClassArray = finalColorClasses.split(' ');
+            pieceElement.classList.add(...colorClassArray);
+            
             if (onComplete) {
                 onComplete();
             }
         };
+        
+        // フォールバックタイマーを追加（アニメーションが何らかの理由で完了しない場合）
+        setTimeout(() => {
+            if (animation.playState === 'running') {
+                console.warn('Player animation timeout, forcing completion');
+                animation.finish();
+            }
+        }, 200); // 167ms + バッファー
     }
 
     // 石の配置アニメーションを適用（NPC用）
     private applyNPCPlaceAnimation(pieceElement: HTMLElement, cellElement: HTMLElement, onComplete?: () => void): void {
-        console.log('Applying NPC place animation');
+        console.log('Starting NPC place animation');
+        
+        // データ属性から最終的な色を取得
+        const finalColor = pieceElement.getAttribute('data-final-color');
+        const finalColorClasses = finalColor === 'black' 
+            ? 'bg-gray-800 border-2 border-gray-600'
+            : 'bg-gray-50 border-2 border-gray-300';
         
         // 石のアニメーション
         const pieceAnimation = pieceElement.animate([
@@ -634,16 +704,43 @@ class GameUI {
             fill: 'both'
         });
         
-        pieceAnimation.onfinish = () => {
-            console.log('NPC piece animation finished');
-            if (onComplete) {
-                onComplete();
+        let pieceCompleted = false;
+        let cellCompleted = false;
+        
+        const checkCompletion = () => {
+            if (pieceCompleted && cellCompleted) {
+                console.log('NPC place animation fully completed - now setting color');
+                // 両方のアニメーション完了後に色を設定
+                pieceElement.classList.remove('bg-transparent', 'border-transparent');
+                const colorClassArray = finalColorClasses.split(' ');
+                pieceElement.classList.add(...colorClassArray);
+                
+                if (onComplete) {
+                    onComplete();
+                }
             }
         };
         
-        cellAnimation.onfinish = () => {
-            console.log('NPC cell animation finished');
+        pieceAnimation.onfinish = () => {
+            console.log('NPC piece animation completed');
+            pieceCompleted = true;
+            checkCompletion();
         };
+        
+        cellAnimation.onfinish = () => {
+            console.log('NPC cell animation completed');
+            cellCompleted = true;
+            checkCompletion();
+        };
+        
+        // フォールバックタイマーを追加（アニメーションが何らかの理由で完了しない場合）
+        setTimeout(() => {
+            if (!pieceCompleted || !cellCompleted) {
+                console.warn('NPC animation timeout, forcing completion');
+                pieceAnimation.finish();
+                cellAnimation.finish();
+            }
+        }, 300); // 267ms + バッファー
     }
 
     /**
@@ -824,13 +921,16 @@ class GameUI {
             
             // アニメーション完了後にNPCの手を実行するコールバック
             const onAnimationComplete = () => {
+                console.log('Player animation sequence completed');
+                console.log(`After player move - currentPlayer: ${this.game.getCurrentPlayer()}, isGameOver: ${this.game.isGameOver()}`);
                 if (this.game.isGameOver()) {
                     this.showGameOver();
                 } else if (this.isNPCEnabled && this.game.getCurrentPlayer() === Player.WHITE) {
-                    // プレイヤーのアニメーション完了後、少し間を置いてからNPCの手を実行
+                    // プレイヤーのアニメーション完了後、適切な間を置いてからNPCの手を実行
+                    console.log('Scheduling NPC move after player animation completion');
                     setTimeout(() => {
                         this.makeNPCMove();
-                    }, 50);
+                    }, 200); // 200msに延長してアニメーション完了を確実に待つ
                 }
             };
             
@@ -847,6 +947,7 @@ class GameUI {
             return;
         }
 
+        console.log('NPC move started');
         // NPCターン開始
         this.isNPCTurn = true;
         this.hideTargetLock(); // ターゲットロックを非表示
@@ -855,6 +956,7 @@ class GameUI {
         try {
             const validMoves = this.game.getValidMoves();
             if (validMoves.length === 0) {
+                console.log('No valid moves for NPC');
                 return;
             }
 
@@ -863,6 +965,7 @@ class GameUI {
                 validMoves, 
                 this.game.getCurrentPlayer()
             );
+            console.log(`NPC selected move: (${npcMove.row}, ${npcMove.col})`);
 
             // makeMove前の盤面状態を保存
             const preMoveBoard = this.game.getBoard().map(row => [...row]);
@@ -873,11 +976,13 @@ class GameUI {
                 
                 // NPCアニメーション完了後にプレイヤーの有効手を表示
                 const onNPCAnimationComplete = () => {
+                    console.log('NPC animation sequence completed');
                     if (this.game.isGameOver()) {
                         this.showGameOver();
                     } else {
                         // NPCのアニメーションが完了したら、プレイヤーの有効手を遅延表示
-                        this.showValidMovesWithAnimation(33); // 33ms後に表示開始（さらに短縮）
+                        console.log('Showing player valid moves after NPC animation completion');
+                        this.showValidMovesWithAnimation(100); // 100msに短縮（但し確実に待つ）
                     }
                 };
                 
@@ -896,7 +1001,11 @@ class GameUI {
      * NPCのターンかどうかを判定
      */
     private isCurrentlyNPCTurn(): boolean {
-        return this.isNPCEnabled && this.game.getCurrentPlayer() === Player.WHITE && !this.game.isGameOver();
+        const currentPlayer = this.game.getCurrentPlayer();
+        const isGameOver = this.game.isGameOver();
+        const result = this.isNPCEnabled && currentPlayer === Player.WHITE && !isGameOver;
+        console.log(`NPC Turn Check: enabled=${this.isNPCEnabled}, currentPlayer=${currentPlayer}, isGameOver=${isGameOver}, result=${result}`);
+        return result;
     }
 
     /**
@@ -910,9 +1019,6 @@ class GameUI {
         const score = this.game.getScore();
         this.blackScoreElement.textContent = score.black.toString();
         this.whiteScoreElement.textContent = score.white.toString();
-        
-        const currentPlayer = this.game.getCurrentPlayer();
-        this.currentPlayerElement.textContent = currentPlayer === Player.BLACK ? '黒' : '白';
     }
     
     private showGameOver(): void {
